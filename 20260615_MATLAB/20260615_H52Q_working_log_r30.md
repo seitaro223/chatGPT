@@ -5644,3 +5644,3517 @@ F_formは、今後 `linear_v1` を正本候補として扱う。
 今後はExcelを手作業で修正せず、MATLABコードとMarkdownログによりF_formの定義・値・出典を管理する。
 
 ---
+
+---
+
+## 2026-06-16 追記：BT08-A2b〜BT09-B、F_form linear_v1の入力化・マクロ再計算完了
+
+### 位置づけ
+
+BT08-A1dで `F_form` を `linear_v1` として再定義した後、その値を実際のマクロ計算へ反映するための一連の作業を行った。
+
+ここでの目的は、単にF_formを直すことではなく、以下を明確に分離することだった。
+
+```text
+legacy F_form：
+  これまでマクロブックに入っていた既存値。
+  Excel手作業・暫定処理・区間込み積分などが混在していた可能性がある。
+
+Fform_linear_v1：
+  DNB位置で線形補間し、入口からDNB位置までを線形積分して求めた再定義値。
+  今後の正本候補。
+```
+
+重要なのは、既存の `F_form` を直接上書きするのではなく、`Fform_legacy` と `Fform_linear` を両方残し、差分を追跡できる形にしたことである。
+
+---
+
+### BT08-A2：current_bundle_input_v2作成
+
+最初に、`current_bundle_input_v1` に `Fform_linear` 関連列を追加する作業を行った。
+
+ただし、最初のBT08-A2では、`tm_F1_108 / tm_F1_161 / tm_F1_164` のF1側3シートだけが対象になり、noF1側の `tm_108 / tm_161 / tm_164` は対象外になっていた。
+
+これは失敗というより、シート名判定がF1側に寄っていたためである。
+
+F_formはF1補正そのものではなく、非一様加熱分布をDNB位置の局所熱流束基準へ換算する係数なので、noF1/F1の両方に同じFform定義を持たせる必要がある。
+
+---
+
+### BT08-A2b：noF1/F1両方を含むcurrent_bundle_input_v2b作成
+
+BT08-A2bとして修正版を作成した。
+
+対象シートは以下の6シートとした。
+
+```text
+tm_108
+tm_161
+tm_164
+tm_F1_108
+tm_F1_161
+tm_F1_164
+```
+
+BT08-A2bでは、6シートすべてに以下のような列を追加した。
+
+```text
+Fform_definition_version
+Fform_target_kind
+Fform_case_label
+Fform_DNB_z_ratio_linear
+Fform_q_DNB_linear
+Fform_blue_area_linear
+Fform_orange_area_linear
+Fform_linear
+Fform_legacy
+Fform_diff_linear_minus_legacy
+Fform_ratio_linear_to_legacy
+Fform_mapping_status
+Fform_definition_note
+```
+
+結果として、noF1側58行、F1側58行、合計116行がすべてマップされた。
+
+この時点で、`current_bundle_input_v2b` をFform管理用の正本候補として扱える状態になった。
+
+---
+
+### BT08-A3：マクロ投入用F_form差し替え表の確定
+
+次に、マクロブックへFform_linearを投入するための差し替え表を作成した。
+
+ここではまだマクロブックは編集していない。
+
+作ったものは、以下の考え方である。
+
+```text
+original_value：
+  legacy F_form
+
+replace_value：
+  Fform_linear_v1
+
+差し替えキー：
+  No
+
+対象：
+  noF1 58行
+  F1 58行
+```
+
+BT08-A3のQCでは、以下が確認された。
+
+```text
+差し替え表の行数：
+  116行
+
+内訳：
+  noF1 = 58行
+  F1   = 58行
+
+対象シート：
+  6シート
+
+マップ状態：
+  116/116行すべてマップ済み
+
+DNB位置対応差：
+  最大 0.00012955455 程度で小さい
+
+最大Fform変更量：
+  0.1363557
+```
+
+このため、マクロ投入用のF_form差し替え表は確定してよいと判断した。
+
+---
+
+### BT09-0：マクロブック側のF_form入力位置確認
+
+次に、マクロブック側でF_formがどこに入っているかを監査した。
+
+F1なし版とF1あり版の2つを診断した。
+
+結果として、両方とも構造は同じだった。
+
+```text
+対象シート：
+  tm
+
+No列：
+  M列
+
+F_form列：
+  BG列
+
+ヘッダ行：
+  1行目
+
+データ開始行：
+  2行目
+```
+
+A3側では `tm_108 / tm_161 / tm_164 / tm_F1_...` のようにシートを分けて管理していたが、マクロブック側ではすべて `tm` シートにまとまっていた。
+
+したがって、マクロブックへ反映する際は、シート名ではなく `No` をキーにするのが正しい。
+
+---
+
+### BT09-A：コピー版マクロブックへのFform_linear投入
+
+BT09-Aでは、元マクロブックを直接編集せず、コピー版を作ってから `tm` シートの `BG列 = F_form` だけを `Fform_linear` に差し替えた。
+
+処理対象は以下の2ブックである。
+
+```text
+F1なし版：
+  celataモデル_簡易計算_単管_櫻井検算r125_バンドルF1なし.xlsm
+
+F1あり版：
+  celataモデル_簡易計算_単管_櫻井検算r126_バンドルF1あり.xlsm
+```
+
+出力されたコピー版は以下である。
+
+```text
+F1なし linear版：
+  celataモデル_簡易計算_単管_櫻井検算r125_バンドルF1なし_FformLinear_v1_20260616_152518.xlsm
+
+F1あり linear版：
+  celataモデル_簡易計算_単管_櫻井検算r126_バンドルF1あり_FformLinear_v1_20260616_152518.xlsm
+```
+
+BT09-Aでは、以下が確認された。
+
+```text
+処理したマクロブック数：
+  2
+
+置換行：
+  noF1 = 58行
+  F1   = 58行
+
+旧値とA3 original_valueの不一致：
+  0件
+
+変更対象：
+  tmシート BG列のみ
+
+元マクロブック：
+  上書きしていない
+
+マクロ実行：
+  まだ実行していない
+```
+
+この時点で、Fform_linearを投入したマクロブックコピーが準備できた。
+
+---
+
+### BT09-B：コピー版マクロブックで再計算
+
+その後、ユーザー側でコピー版マクロブックを開き、マクロ再計算を実施した。
+
+つまり、BT09-Bは完了した。
+
+再計算後のブックは以下である。
+
+```text
+noF1再計算後：
+  celataモデル_簡易計算_単管_櫻井検算r125_バンドルF1なし_FformLinear_v1_20260616_152518.xlsm
+
+F1再計算後：
+  celataモデル_簡易計算_単管_櫻井検算r126_バンドルF1あり_FformLinear_v1_20260616_152518.xlsm
+```
+
+---
+
+### BT10一次診断：FformLinear化によるP/M影響
+
+BT09-B後のマクロブックを読み取り、BT10として一次診断を行った。
+
+#### noF1側
+
+```text
+108：
+  PM 0.621831 → 0.653049
+  ΔPM = +0.031218
+
+161：
+  PM 0.620980 → 0.620980
+  ΔPM = 0
+
+164：
+  PM 0.570923 → 0.597862
+  ΔPM = +0.026939
+```
+
+noF1では、108と164は少し上がった。
+ただし、noF1全体としてはまだ過小評価側にある。
+
+#### F1側
+
+旧F1代表値は以下だった。
+
+```text
+108：
+  PM = 1.06679
+
+161：
+  PM = 0.908841
+
+164：
+  PM = 0.892018
+```
+
+FformLinear再計算後は以下になった。
+
+```text
+108：
+  PM = 1.123223
+  ΔPM = +0.056433
+
+161：
+  PM = 0.908841
+  ΔPM ≒ 0
+
+164：
+  PM = 0.939561
+  ΔPM = +0.047543
+```
+
+---
+
+### 現時点の解釈
+
+FformLinear化により、F_form値はlegacyより小さくなった。
+その結果、今回のマクロ実装では qP / PM が上昇した。
+
+これは、マクロ内でF_formがqPに対して実質的に「割る側」に効いているためと考えられる。
+
+重要な変化は以下である。
+
+```text
+旧F1：
+  108はやや高め
+  161/164は低め
+
+F1 + FformLinear_v1：
+  108はさらに過大側へ移動
+  161は変化なし
+  164はかなり改善
+```
+
+したがって、legacy Fformの暫定処理は、164の低め残差を一部作っていた可能性がある。
+
+ただし、FformLinear化だけで全体が整理されたとは言えない。
+108はむしろ悪化し、過大側に動いたためである。
+
+---
+
+### 判断
+
+```text
+採用：
+  FformLinear_v1でマクロ再計算できた。
+
+採用：
+  FformLinear_v1は、legacy Fformより定義としては一貫している。
+
+採用：
+  マクロブックへの投入は、NoキーでtmシートBG列を差し替える方法で成立した。
+
+採用：
+  元マクロブックは上書きせず、コピー版で処理できた。
+
+注意：
+  FformLinear化により164は改善する。
+
+注意：
+  FformLinear化により108は過大側へ悪化する。
+
+注意：
+  161は一様加熱のためFform変更の影響を受けない。
+
+保留：
+  F1 + FformLinear_v1を最終採用してよいかは、108過大化の扱いを見て判断する。
+
+保留：
+  FformLinear後の残差構造を、Tsub / x_eq / z_DNB / L/DH / Fform_linear / Bundleで再診断する必要がある。
+```
+
+---
+
+### 次にやること
+
+次はBT10-Bとして、FformLinear後の残差構造を再診断する。
+
+見るべきものは以下である。
+
+```text
+PM_F1_linear
+residual_F1_linear = PM_F1_linear - 1
+
+説明候補：
+  Tsub
+  x_eq
+  z_DNB/DH
+  z_DNB/L
+  L/DH
+  Fform_linear
+  Bundle
+```
+
+特に確認したいのは以下である。
+
+```text
+1. 108の過大化は、FformLinear定義の問題か。
+2. 164の改善は、legacy Fformの暫定処理による低め残差の解消と見てよいか。
+3. 161が低いままなのは、Fformでは説明できない残差か。
+4. F1(Tsub)維持判断は変わらないか。
+5. FformLinear_v1を正本にするか、legacyと併記して感度扱いにするか。
+```
+
+---
+
+---
+
+## 2026-06-16 追記：BT10-B/BT10-C、FformLinear_v1再計算後の残差診断と採用判断
+
+### 位置づけ
+
+BT09-Bで、FformLinear_v1を投入したnoF1版・F1版マクロブックの再計算が完了した。
+
+その後、BT10-BとしてFformLinear_v1再計算後の残差構造を再診断し、さらにBT10-Cとしてlegacy F_formとFformLinear_v1を比較し、FformLinear_v1を正本候補にするか、legacy併記の感度ケースとして扱うかを判断するための整理を行った。
+
+この段階でも、補正式は作らない。
+
+前提は以下である。
+
+```text
+- F1(Tsub)は維持する。
+- F1(Tsub)をF(x_eq)へ置換しない。
+- F_formはF1ではない。
+- F_formは非一様加熱分布をDNB位置の局所熱流束基準へ換算する係数である。
+- FformLinear_v1は、F_form定義の一貫化であり、残差補正式ではない。
+- qMは結果側量なので補正式入力には使わない。
+- R2が高いモデルを補正式として採用しない。
+```
+
+---
+
+### BT10-B：FformLinear_v1後の残差構造
+
+BT10-Bでは、FformLinear_v1版のnoF1/F1マクロブックを読み、以下を確認した。
+
+```text
+PM_noF1_linear
+PM_F1_linear
+err_F1_linear = PM_F1_linear - 1
+delta_PM_linear = PM_F1_linear - PM_noF1_linear
+lift_ratio_linear = PM_F1_linear / PM_noF1_linear
+```
+
+F1 + FformLinear_v1後のケース平均は以下であった。
+
+```text
+108:
+  PM_F1_linear = 1.123223
+  err_F1_linear = +0.123223
+
+161:
+  PM_F1_linear = 0.908841
+  err_F1_linear = -0.091159
+
+164:
+  PM_F1_linear = 0.939561
+  err_F1_linear = -0.060439
+```
+
+この結果から、FformLinear_v1化により、164は改善した一方、108は過大側へ悪化した。
+
+161は一様加熱であり、F_form変更の影響を受けないため、不変であった。
+
+---
+
+### BT10-B：残差はTsub/x_eq側ではなく、Fform/DNB位置/L_DH側に残る
+
+BT10-Bでは、PM_F1_linearに対する単独説明力を確認した。
+
+主な結果は以下である。
+
+```text
+PM_F1_linear vs Tsub:
+  R2 ≈ 0.006
+
+PM_F1_linear vs x_eq:
+  R2 ≈ 0.032
+
+PM_F1_linear vs Fform_linear:
+  R2 ≈ 0.243
+
+PM_F1_linear vs z_DNB/DH:
+  R2 ≈ 0.444
+
+PM_F1_linear vs z_DNB/L:
+  R2 ≈ 0.221
+
+PM_F1_linear vs L/DH:
+  R2 ≈ 0.477
+```
+
+したがって、FformLinear_v1後のF1残差は、Tsub/x_eq側にはあまり残っていない。
+
+むしろ、Fform_linear、DNB位置、L/DH、ケース構造側に残っている。
+
+ただし、これは補正式を作る根拠ではない。
+
+理由は、説明候補同士の交絡が強いためである。
+
+```text
+Fform_linear vs L/DH:
+  R2 ≈ 0.714
+
+z_DNB/DH vs L/DH:
+  R2 ≈ 0.853
+
+z_DNB/DH vs z_DNB/L:
+  R2 ≈ 0.740
+
+x_eq vs Tsub:
+  R2 ≈ 0.704
+```
+
+特に、Fform_linear、z_DNB/DH、L/DHは強く交絡している。
+
+したがって、PM_F1_linearとL/DHの相関が高く見えても、それを純粋なL/DH効果とは読まない。
+
+同様に、Fform_linearまたはz_DNB/DHが原因であるとも断定しない。
+
+---
+
+### BT10-Bの判断
+
+BT10-B時点の判断は以下である。
+
+```text
+FformLinear_v1後、164は改善し、108は過大側へ悪化する。
+
+F1後残差は、Tsub/x_eq側ではなく、Fform_linear、DNB位置、L/DH、ケース構造側に残る。
+
+ただし、Fform_linear、z_DNB/DH、L/DHは強く交絡している。
+
+したがって、Fform補正式、L/DH補正式、z_DNB/DH補正式には進まない。
+```
+
+---
+
+### BT10-C：legacy F_formとFformLinear_v1の比較
+
+BT10-Cでは、legacy F_formとFformLinear_v1を比較した。
+
+目的は、FformLinear_v1を正本候補にするか、legacy併記の感度ケースとして扱うかを判断することである。
+
+F1後P/Mのbundle平均は以下であった。
+
+```text
+108:
+  legacy       = 1.066789
+  linear_v1    = 1.123223
+  差           = +0.056434
+
+161:
+  legacy       = 0.908841
+  linear_v1    = 0.908841
+  差           = 0
+
+164:
+  legacy       = 0.892018
+  linear_v1    = 0.939561
+  差           = +0.047542
+```
+
+108は、legacyでもやや過大側であったが、FformLinear_v1によりさらに過大側へ動いた。
+
+164は、legacyでは過小側であったが、FformLinear_v1によりPM=1へ近づいた。
+
+161は一様加熱なので変化しない。
+
+---
+
+### 誤差指標の比較
+
+BT10-Cでは、row重みおよびbundle平均の誤差指標も確認した。
+
+row重み全体では以下である。
+
+```text
+row_weighted_all_MAE_F1:
+  legacy    = 0.095726
+  linear_v1 = 0.099594
+  差        = +0.003868
+  → MAEはわずかに悪化
+
+row_weighted_all_RMSE_F1:
+  legacy    = 0.128179
+  linear_v1 = 0.126960
+  差        = -0.001219
+  → RMSEはわずかに改善
+
+row_weighted_all_bias_F1:
+  legacy    = -0.059125
+  linear_v1 = -0.028289
+  差        = +0.030836
+  → 全体バイアスは0に近づくが、評価上は108過大化を含む
+```
+
+bundle平均を同じ重みで見ると以下である。
+
+```text
+bundle_mean_MAE_F1:
+  legacy    = 0.088643
+  linear_v1 = 0.091607
+  差        = +0.002964
+  → 少し悪化
+
+bundle_mean_RMSE_F1:
+  legacy    = 0.090242
+  linear_v1 = 0.095126
+  差        = +0.004884
+  → 少し悪化
+
+bundle_mean_bias_F1:
+  legacy    = -0.044117
+  linear_v1 = -0.009458
+  差        = +0.034659
+  → 平均バイアスは0に近づく
+```
+
+したがって、FformLinear_v1は一様に性能改善するわけではない。
+
+164を改善する一方で、108を悪化させる。
+
+全体バイアスは0に近づくが、MAEやbundle平均RMSEでは悪化側に見える。
+
+---
+
+### FformLinear_v1の扱い
+
+BT10-Cでの推奨扱いは以下である。
+
+```text
+FformLinear_v1は、legacyより定義としては一貫している。
+
+ただし、予測性能としては混在結果である。
+
+164は改善する。
+108は悪化する。
+161は変化しない。
+
+したがって、FformLinear_v1を「残差補正式」として採用してはいけない。
+
+FformLinear_v1は、
+  F_form定義の正規化候補
+  または legacy併記の感度ケース
+として扱う。
+```
+
+より具体的には、以下の2案が残る。
+
+```text
+Option 1:
+  FformLinear_v1を正本候補とする。
+  legacyは比較・感度として残す。
+  ただし、108過大化を必ず併記する。
+
+Option 2:
+  短期的にはlegacyを主結果として残し、
+  FformLinear_v1を感度ケースとして併記する。
+  報告前の保守的運用としては安全。
+```
+
+現時点で避けるべき案は以下である。
+
+```text
+避ける：
+  FformLinear後の残差を、さらにFform/L_DH/z_DNBで補正すること。
+
+避ける：
+  FformLinear作業を完全撤回し、legacyだけで進むこと。
+```
+
+完全撤回しない理由は、164低め残差の一部がlegacy F_form定義に由来していた可能性があるためである。
+
+---
+
+### 判断
+
+BT10-C時点の判断を以下のように固定する。
+
+```text
+採用候補：
+  FformLinear_v1は、F_form定義としてlegacyより一貫している。
+
+採用：
+  F1(Tsub)は維持する。
+
+採用：
+  F1(Tsub)をF(x_eq)へ置換しない。
+
+採用：
+  FformLinear_v1を残差補正式として扱わない。
+
+採用：
+  L/DH、z_DNB/DH、Fform_linearから新しい補正式を作らない。
+
+注意：
+  FformLinear_v1は164を改善する。
+
+注意：
+  FformLinear_v1は108を過大側へ悪化させる。
+
+注意：
+  161は一様加熱なので変化しない。
+
+保留：
+  FformLinear_v1を正本にするか、legacy主・linear感度にするか。
+
+保留：
+  108過大化を、軸方向出力分布・DNB位置・Fform定義のどの問題として扱うか。
+
+撤回気味：
+  FformLinear後の残差をさらに補正式化する案。
+```
+
+---
+
+### 次アクション
+
+次はBT11として、FformLinear_v1の扱いを作業方針として固定する。
+
+候補は以下である。
+
+```text
+BT11-A：
+  FformLinear_v1を正本候補として採用。
+  legacyを感度比較として併記する。
+
+BT11-B：
+  legacyを主結果として残し、
+  FformLinear_v1を感度ケースとして併記する。
+
+BT11-C：
+  FformLinear_v1とlegacyの両方を保持し、
+  現時点ではどちらも最終正本にしない。
+```
+
+現時点での推奨は、BT11-Cに近い。
+
+つまり、
+
+```text
+FformLinear_v1は定義としては正本候補。
+ただし、性能面では混在するため、legacyとの比較を必ず併記する。
+
+当面は、
+  FformLinear_v1 = 定義正規化ケース
+  legacy = 既往計算との比較ケース
+として両方を保持する。
+```
+
+この判断をログに残した上で、次フェーズでは、FformLinear_v1を使って新たな補正式を作るのではなく、108過大化と164改善の物理的意味を、非一様加熱分布・DNB位置・局所熱流束基準換算の観点から確認する。
+
+---
+---
+
+## 2026-06-16 追記：BT11-A、FformLinear_v1を正本採用し、legacy F_formは廃止扱いにする
+
+### 位置づけ
+
+BT10-B/BT10-Cでは、FformLinear_v1を投入したマクロ再計算結果を確認し、legacy F_formとの比較を行った。
+
+BT10-Cでは一度、FformLinear_v1を「正本候補」としつつ、legacyを感度比較として併記する案も残した。
+
+しかし、その後の整理により、legacy F_formは独立した物理モデルや感度ケースではなく、DNB位置の局所熱流束基準と整合しない暫定処理・定義ミスであったと判断した。
+
+したがって、BT11-Aとして以下を採用する。
+
+```text
+FformLinear_v1：
+  今後の正本として採用する。
+
+legacy F_form：
+  感度比較ケースとは扱わない。
+  旧計算とのトレーサビリティ、作業履歴、ミスの記録としてのみ残す。
+```
+
+---
+
+### 判断理由
+
+F_formは、F1(Tsub)とは別の量であり、軸方向非一様加熱分布をDNB位置の局所熱流束基準へ換算するための係数である。
+
+この定義から見ると、F_formは以下で扱うべきである。
+
+```text
+F_form = DNB位置までの加熱分布面積 / DNB位置局所熱流束で作る矩形面積
+```
+
+すなわち、
+
+```text
+FformLinear_v1 = Blue_area_linear / Orange_area_linear
+```
+
+が現在の定義として一貫している。
+
+一方、legacy F_formには、青面積そのものに近い扱いや、手作業・暫定処理が混在していた可能性があり、DNB位置の局所熱流束基準換算としては不整合である。
+
+そのため、legacy F_formを「別の物理仮定に基づく感度ケース」として扱うのは適切ではない。
+
+legacyは、あくまで旧計算の再現・修正履歴・監査用に保持する。
+
+---
+
+### BT10-C結果の扱い
+
+BT10-Cでは、FformLinear_v1により以下の変化が確認された。
+
+```text
+108：
+  PM_F1 = 1.066789 → 1.123223
+  過大側へ悪化
+
+161：
+  PM_F1 = 0.908841 → 0.908841
+  一様加熱のため変化なし
+
+164：
+  PM_F1 = 0.892018 → 0.939561
+  過小評価が改善
+```
+
+この結果だけを見ると、FformLinear_v1は性能面で一様に改善するわけではない。
+
+しかし、これはFformLinear_v1を退ける理由にはしない。
+
+理由は、FformLinear_v1は残差補正式ではなく、F_form定義の修正だからである。
+
+```text
+性能が改善するから採用するのではない。
+定義として正しいため採用する。
+```
+
+ただし、FformLinear_v1により108が過大側へ悪化することは重要な診断結果である。
+
+これは、F_formを戻す理由ではなく、108側に残る別の未整理要因として扱う。
+
+---
+
+### 採用・廃止・保留
+
+```text
+採用：
+  FformLinear_v1を今後のF_form正本とする。
+
+採用：
+  F1(Tsub)は維持する。
+
+採用：
+  F1(Tsub)をF(x_eq)へ置換しない。
+
+採用：
+  FformLinear_v1を残差補正式として扱わない。
+
+採用：
+  FformLinear_v1後の残差を、さらにFform/L_DH/z_DNBで補正式化しない。
+
+廃止扱い：
+  legacy F_formを主解析や感度比較ケースとして使うこと。
+
+保持：
+  legacy F_formは、旧計算の再現、ミスの記録、変更履歴、監査用として残す。
+
+保留：
+  FformLinear_v1後に108が過大側へ悪化する理由。
+
+保留：
+  108過大化を、非一様加熱分布、DNB位置、局所熱流束基準、ケース代表性のどれとして整理するか。
+```
+
+---
+
+### 今後の運用
+
+今後のバンドル解析では、F_formはFformLinear_v1を用いる。
+
+legacy F_formは、以下の場合に限って参照する。
+
+```text
+1. 旧計算との差分を説明する場合
+2. 修正履歴を確認する場合
+3. なぜ164の低め残差が一部改善したかを説明する場合
+4. 過去のマクロブックやログとの整合を確認する場合
+```
+
+一方で、legacy F_formを以下のようには使わない。
+
+```text
+- 物理的な感度ケース
+- 正本候補
+- 代替モデル
+- 108過大化を避けるための調整値
+```
+
+---
+
+### BT11-Aの結論
+
+BT11-Aとして、以下を固定する。
+
+```text
+FformLinear_v1をF_formの正本として採用する。
+
+legacy F_formは、感度比較ではなく、旧定義ミス・暫定処理の記録として保持する。
+
+FformLinear_v1により164は改善し、108は過大側へ悪化するが、これはF_formをlegacyへ戻す理由ではない。
+
+108過大化は、FformLinear_v1後に残った別の診断課題として扱う。
+
+この段階でも、Fform/L_DH/z_DNBによる追加補正式は作らない。
+```
+
+---
+
+---
+
+## 2026-06-16 追記：BT12-A、current_bundle_input_v2_FformLinearCanonical作成
+
+### 位置づけ
+
+BT11-Aで、FformLinear_v1をF_formの正本として採用し、legacy F_formは感度比較ではなく旧定義ミス・監査用として扱う方針にした。
+
+そのため、以後のバンドル解析で旧 `current_bundle_input_v1` を読み続けないよう、BT12-Aとして `current_bundle_input_v2_FformLinearCanonical` を作成した。
+
+### 入力
+
+```text
+H52Q_current_bundle_input_v1_20260615_180822.xlsx
+BT08A3_macro_Fform_replace_package_20260616_145859.xlsx
+```
+
+### 出力
+
+```text
+H52Q_current_bundle_input_v2_FformLinearCanonical_20260616_181819.xlsx
+run_report_BT12_current_bundle_input_v2_FformLinearCanonical_20260616_181819.md
+```
+
+### 処理内容
+
+対象シートは以下の6シートである。
+
+```text
+tm_108
+tm_161
+tm_164
+tm_F1_108
+tm_F1_161
+tm_F1_164
+```
+
+処理方針は以下である。
+
+```text
+F_form = FformLinear_v1
+F_form_legacy_deprecated = 旧F_form
+Fform_definition_version = linear_v1
+Fform_status = canonical
+legacy_Fform_status = deprecated_definition_error_audit_only
+```
+
+つまり、通常解析が読む `F_form` 列そのものを、FformLinear_v1正本値に置換した。
+
+legacy F_formは感度比較ではなく、旧定義ミス・監査用としてのみ保持する。
+
+### QC結果
+
+BT12-AのQCは正常であった。
+
+```text
+target_rows:
+  116
+
+mapped_rows:
+  116 / 116
+
+no_map_rows:
+  0
+
+canonical_equals_linear:
+  116 / 116
+
+old_value_vs_map_original:
+  large_diff = 0
+```
+
+したがって、noF1 58行、F1 58行の合計116行すべてで、F_form列がFformLinear_v1に正しく置換された。
+
+### sheet別の主な変化
+
+```text
+108:
+  Fform_old_mean = 0.669495
+  Fform_new_mean = 0.636086
+  delta_mean     = -0.033408
+
+161:
+  Fform_old_mean = 1.000000
+  Fform_new_mean = 1.000000
+  delta_mean     = 0
+
+164:
+  Fform_old_mean = 1.346381
+  Fform_new_mean = 1.279881
+  delta_mean     = -0.066500
+```
+
+FformLinear_v1への置換により、108と164ではF_formが低下した。
+
+161は一様加熱であり、F_form=1のまま変化しない。
+
+### 判断
+
+BT12-Aにより、FformLinear_v1を正本とした `current_bundle_input_v2` の作成は成功した。
+
+以後のバンドル解析では、旧 `H52Q_current_bundle_input_v1_20260615_180822.xlsx` ではなく、v2系の入力を読む。
+
+ただし、BT12-Aのv2は、QCや管理列が多く、解析入力としてはやや重い。
+
+そのため、BT12-Aは以下の扱いにする。
+
+```text
+BT12-A full版：
+  FformLinear_v1正本化の作成履歴・QC確認用
+
+次のBT12-B minimal版：
+  今後のBT解析で読むための最小構成入力
+```
+
+### 次アクション
+
+次はBT12-Bとして、BT12-A full版を元に、解析用6シートだけを残したminimal版を作成する。
+
+BT12-Bでは、READMEやQCシートはworkbook内に入れず、QCはrun_reportに残す。
+
+minimal版では、通常解析に必要な列と、F_form監査に必要な最低限の列だけを残す。
+
+---
+
+---
+
+## 2026-06-16 追記：BT12-B不採用とBT12-C tmCompatible版の採用
+
+### 位置づけ
+
+BT12-Aでは、FformLinear_v1をF_form正本として反映した `current_bundle_input_v2_FformLinearCanonical` を作成した。
+
+その後、BT12-Bとして、以後のBT解析で読みやすい最小構成版を作成した。
+
+しかし、BT12-B minimal版は、tmシートの列を削りすぎていた。
+
+current_bundle_inputの重要な役割は、tmシートがマクロブック由来の列構成と対応していることである。
+
+そのため、列数を減らしてしまうと、以後の解析や監査で、元マクロブックとの対応が崩れる。
+
+この判断により、BT12-B minimal版は今後の入力としては不採用とした。
+
+---
+
+### BT12-Bの扱い
+
+BT12-Bの出力は以下であった。
+
+```text
+H52Q_current_bundle_input_v2_minimal_FformLinearCanonical_20260616_183149.xlsx
+run_report_BT12B_current_bundle_input_v2_minimal_20260616_183149.md
+```
+
+BT12-Bでは、各tmシートが82列から25列へ削減されていた。
+
+また、run_report上で `PM` がmissing required columnsとして検出されていた。
+
+これは「次BTで確認すればよい」ではなく、入力ブックとして必要列まで削ってしまった状態と判断した。
+
+したがって、BT12-B minimal版は以下の扱いにする。
+
+```text
+BT12-B minimal版：
+  不採用
+
+理由：
+  tmシートの列を削りすぎた。
+  マクロブック由来の列構成との対応を壊した。
+  current_bundle_inputとしての監査性・継続性が落ちる。
+```
+
+ただし、BT12-Bは完全に無駄ではない。
+
+「必要最小限にしすぎると、tm互換性が壊れる」という運用上の失敗例としてログに残す。
+
+---
+
+### BT12-Cの目的
+
+BT12-Bの反省を受け、BT12-Cでは、v1のtm列構成を維持したまま、F_form列だけをFformLinear_v1へ置換する方針に変更した。
+
+BT12-Cの目的は以下である。
+
+```text
+- tmシートの列数・列名・列順はv1と同じにする。
+- tmシートに追加管理列を入れない。
+- 変更はF_form列の値だけに限定する。
+- README_BT12Cだけを追加し、正本化・legacy扱い・QCはそこへ逃がす。
+- BT12-B minimal版は今後の入力には使わない。
+- legacy F_formは感度比較ではなくdeprecated / audit only。
+```
+
+---
+
+### 入力
+
+```text
+H52Q_current_bundle_input_v1_20260615_180822.xlsx
+BT08A3_macro_Fform_replace_package_20260616_145859.xlsx
+```
+
+---
+
+### 出力
+
+```text
+H52Q_current_bundle_input_v2_FformLinearCanonical_tmCompatible_20260616_184700.xlsx
+run_report_BT12C_current_bundle_input_v2_tmCompatible_20260616_184700.md
+```
+
+---
+
+### 対象シート
+
+BT12-Cで処理した対象シートは以下の6シートである。
+
+```text
+tm_108
+tm_161
+tm_164
+tm_F1_108
+tm_F1_161
+tm_F1_164
+```
+
+---
+
+### BT12-CのQC結果
+
+BT12-Cでは、対象6シートすべてで、v1と同じ列構成が維持された。
+
+```text
+target_rows:
+  116
+
+mapped_rows:
+  116 / 116
+
+no_map_rows:
+  0
+
+tm_column_structure_same:
+  6 / 6
+
+old_value_vs_map_original:
+  large_diff = 0
+```
+
+また、各シートの列数は以下であった。
+
+```text
+tm_108:
+  v1 = 70列
+  v2 = 70列
+  delta = 0
+
+tm_161:
+  v1 = 70列
+  v2 = 70列
+  delta = 0
+
+tm_164:
+  v1 = 70列
+  v2 = 70列
+  delta = 0
+
+tm_F1_108:
+  v1 = 70列
+  v2 = 70列
+  delta = 0
+
+tm_F1_161:
+  v1 = 70列
+  v2 = 70列
+  delta = 0
+
+tm_F1_164:
+  v1 = 70列
+  v2 = 70列
+  delta = 0
+```
+
+したがって、BT12-Cでは、tmシートの互換性を維持したまま、F_formだけを正本値に置換できた。
+
+---
+
+### F_formの置換結果
+
+BT12-Cでは、F_form列のみをFformLinear_v1へ置換した。
+
+bundle別の平均値は以下である。
+
+```text
+108:
+  Fform_old_mean = 0.669495
+  Fform_new_mean = 0.636086
+  delta_mean     = -0.033408
+
+161:
+  Fform_old_mean = 1.000000
+  Fform_new_mean = 1.000000
+  delta_mean     = 0
+
+164:
+  Fform_old_mean = 1.346381
+  Fform_new_mean = 1.279881
+  delta_mean     = -0.066500
+```
+
+FformLinear_v1への置換により、108と164ではF_formが低下した。
+
+161は一様加熱であり、F_form=1のまま変化しない。
+
+---
+
+### 管理情報の扱い
+
+BT12-Aでは、F_form正本化に関する管理列をtmシート内に追加した。
+
+しかし、BT12-Cでは、tmシートの互換性を優先し、追加管理列は入れない方針に変更した。
+
+管理情報は、tmシートではなく `README_BT12C` とrun_reportへ逃がした。
+
+```text
+Fform_definition_version:
+  linear_v1
+
+Fform_status:
+  canonical
+
+legacy_Fform_status:
+  deprecated_definition_error_audit_only
+
+BT12B_status:
+  rejected_as_input
+```
+
+この整理により、通常解析ではtmシートの既存列構成を保ったまま、F_form列を読めば正本値になる。
+
+legacy F_formはtmシート内には残さない。
+
+legacy F_formは、v1、BT08A3 map、run_report、working_logで追跡する。
+
+---
+
+### 判断
+
+BT12-Cを、今後のバンドル解析入力として採用する。
+
+```text
+採用：
+  H52Q_current_bundle_input_v2_FformLinearCanonical_tmCompatible_20260616_184700.xlsx
+
+不採用：
+  H52Q_current_bundle_input_v2_minimal_FformLinearCanonical_20260616_183149.xlsx
+```
+
+理由は以下である。
+
+```text
+BT12-C：
+  v1のtm列構成を維持している。
+  F_form列だけをFformLinear_v1へ置換している。
+  管理情報はREADME_BT12Cへ逃がしている。
+  以後のBT解析入力として使いやすい。
+
+BT12-B：
+  列を削りすぎた。
+  tm互換性を壊した。
+  今後の入力としては使わない。
+```
+
+---
+
+### 次アクション
+
+次はBT13として、BT12-C tmCompatible版を入力にして、108過大化診断へ進む。
+
+BT13以降では、原則として以下の入力を読む。
+
+```text
+H52Q_current_bundle_input_v2_FformLinearCanonical_tmCompatible_20260616_184700.xlsx
+```
+
+BT13の目的は、FformLinear_v1を正本化した後でも残る108過大化を、以下の観点から診断することである。
+
+```text
+- 108と164の非一様加熱分布の違い
+- DNB位置
+- F_form値
+- L/DH
+- z_DNB/DH
+- z_DNB/L
+- Tsub
+- x_eq
+- qM
+- qP
+```
+
+ただし、BT13でも新しい補正式は作らない。
+
+まずは、正本入力に切り替えた後の診断として、108過大化がどの変数群と対応しているかを確認する。
+
+---
+
+---
+
+## 2026-06-17 追記：BT13、tmCompatible v2入力の不整合発見
+
+### 位置づけ
+
+BT12-Cでは、`H52Q_current_bundle_input_v1_20260615_180822.xlsx` を元に、tmシートの列構成を維持したまま、`F_form` 列だけを `FformLinear_v1` に置換した。
+
+そのうえで、BT13として、BT12-CのtmCompatible v2を入力にして、108/161/164のF1後残差を再診断した。
+
+入力は以下である。
+
+```text
+H52Q_current_bundle_input_v2_FformLinearCanonical_tmCompatible_20260616_184700.xlsx
+```
+
+出力は以下である。
+
+```text
+BT13_tmCompatible_v2_residual_diagnostic_20260617_085431.xlsx
+run_report_BT13_tmCompatible_v2_residual_diagnostic_20260617_085431.md
+```
+
+---
+
+### BT13のQC結果
+
+BT13のQCは、構造上は正常であった。
+
+```text
+row_count:
+  58
+
+bundle_count:
+  3
+
+PM_F1_missing:
+  0
+
+PM_noF1_missing:
+  0
+
+F_form_missing:
+  0
+
+Tsub_missing:
+  0
+
+x_eq_missing:
+  0
+
+z_DNB_DH_missing:
+  0
+
+L_DH_missing:
+  0
+```
+
+したがって、ファイルの読み込み、No対応、列欠損という意味ではBT13は正常に走った。
+
+---
+
+### ただし、重要な不整合を発見した
+
+BT13のbundle summaryでは、F1後のP/Mが以下であった。
+
+```text
+BT13 PM_F1:
+108 = 1.0667888
+161 = 0.90884087
+164 = 0.89201812
+```
+
+これは、BT10-Cで確認したlegacy側の値と一致する。
+
+一方、FformLinear_v1をマクロへ投入して再計算したBT10-B/BT10-Cの結果では、F1後のP/Mは以下であった。
+
+```text
+FformLinear_v1再計算後 PM_F1:
+108 = 1.1232232
+161 = 0.90884087
+164 = 0.93956052
+```
+
+したがって、BT13の結果は、FformLinear_v1再計算後のPM/q_calcを読めていない。
+
+---
+
+### 原因
+
+BT12-Cでは、tmシートの列構成を維持するため、v1を元にして `F_form` 列だけをFformLinear_v1へ置換した。
+
+しかし、v1内の `q_calc`、`PM`、`PM_F1` などの計算済み列は、legacy F_formでマクロ計算された時点の値である。
+
+そのため、BT12-CのtmCompatible v2は、以下のような不整合を持っていた。
+
+```text
+F_form列：
+  FformLinear_v1正本値
+
+q_calc / PM / PM_F1列：
+  legacy F_formで計算された旧値
+```
+
+つまり、BT12-Cは「F_form列の正本化」としては成立したが、「FformLinear_v1再計算済みの解析入力」としては不十分だった。
+
+---
+
+### 判断
+
+BT13の数値診断は、FformLinear_v1正本化後の残差診断としては採用しない。
+
+理由は、入力ブック内で、F_form列とq_calc/PM列の整合が取れていないためである。
+
+ただし、BT13は無駄ではない。
+
+BT13により、current_bundle_inputを作る際に、単にF_form列だけを置換するのでは不十分であり、マクロ再計算済みブックからtmシートを再構成する必要があることが分かった。
+
+---
+
+### BT12-Cの扱い修正
+
+BT12-Cの扱いを以下に修正する。
+
+```text
+BT12-C：
+  tm互換を維持したF_form列置換テスト
+  ただし、q_calc/PM列はlegacy値のままなので、解析入力としては不採用
+
+BT12-B：
+  列を削りすぎたため不採用
+
+BT12-A：
+  F_form列置換のQC用full版
+  ただし、これもq_calc/PM列はlegacy値のまま
+
+今後必要：
+  FformLinear_v1でマクロ再計算済みのr125/r126ブックから、
+  tm互換70列を取り直したcurrent_bundle_input_v2を作る
+```
+
+---
+
+### 正しい次作業
+
+次は、BT13-BまたはBT12-Dとして、FformLinear_v1再計算済みマクロブックを元に、current_bundle_inputを作り直す。
+
+入力候補は以下である。
+
+```text
+noF1再計算後：
+celataモデル_簡易計算_単管_櫻井検算r125_バンドルF1なし_FformLinear_v1_20260616_152518.xlsm
+
+F1再計算後：
+celataモデル_簡易計算_単管_櫻井検算r126_バンドルF1あり_FformLinear_v1_20260616_152518.xlsm
+```
+
+作るべきファイルは以下である。
+
+```text
+H52Q_current_bundle_input_v2_FformLinearRecalc_tmCompatible_YYYYMMDD_HHMMSS.xlsx
+```
+
+この新v2では、以下がすべてFformLinear_v1再計算後の値で揃っている必要がある。
+
+```text
+F_form
+q_calc
+PM
+PM_noF1
+PM_F1
+Fcorr
+Tsub
+x_eq
+DNB位置
+L/DH
+```
+
+---
+
+### 現時点の結論
+
+BT13により、BT12-C tmCompatible v2は、F_form列だけを正本化した入力であり、FformLinear_v1再計算済みの解析入力ではないことが判明した。
+
+したがって、BT13の残差診断は採用しない。
+
+次は、FformLinear_v1再計算済みマクロブックからtm互換current_bundle_input_v2を作り直す。
+
+---
+
+---
+
+## 2026-06-17 追記：BT13-B、FformLinear_v1再計算済みマクロからcurrent_bundle_input_v2を再作成
+
+### 位置づけ
+
+BT13では、BT12-Cで作成したtmCompatible v2を使って残差診断を行った。
+
+しかし、BT13の確認により、BT12-C v2には以下の不整合があることが分かった。
+
+```text
+F_form列：
+  FformLinear_v1正本値
+
+q_calc / PM / PM_F1列：
+  legacy F_formで計算された旧値
+```
+
+つまり、BT12-Cはtm列構成を維持しつつF_form列だけを置換する作業としては成立していたが、FformLinear_v1再計算済みの解析入力としては不十分だった。
+
+そのため、BT13-Bでは、FformLinear_v1再計算済みのr125/r126マクロブックから、current_bundle_input_v2を作り直した。
+
+---
+
+### 入力
+
+```text
+template v1:
+H52Q_current_bundle_input_v1_20260615_180822.xlsx
+
+noF1 recalc macro:
+celataモデル_簡易計算_単管_櫻井検算r125_バンドルF1なし_FformLinear_v1_20260616_152518.xlsm
+
+F1 recalc macro:
+celataモデル_簡易計算_単管_櫻井検算r126_バンドルF1あり_FformLinear_v1_20260616_152518.xlsm
+```
+
+source sheetはいずれも `tm` であった。
+
+---
+
+### 出力
+
+```text
+H52Q_current_bundle_input_v2_FformLinearRecalc_tmCompatible_20260617_091038.xlsx
+
+run_report_BT13B_current_bundle_input_v2_FformLinearRecalc_20260617_091038.md
+```
+
+---
+
+### 処理方針
+
+BT13-Bでは、BT12-A/B/Cのv2は入力として使わなかった。
+
+列構成テンプレートとしてのみ、旧 `current_bundle_input_v1` を使った。
+
+```text
+- BT12-A/B/Cのv2は入力として使わない。
+- FformLinear_v1再計算済みマクロからtmシートを取り直す。
+- template v1と同じ列数・列名・列順を維持する。
+- 追加管理列はtmに入れない。
+- 補正式は作らない。
+```
+
+この方針により、tmシートのマクロブック互換性を保ちながら、F_form、q_calc、PMがすべてFformLinear_v1再計算後の値で揃う入力を作ることを狙った。
+
+---
+
+### QC結果
+
+BT13-BのQCは正常であった。
+
+```text
+target_rows:
+  116
+
+sheet_count:
+  6
+
+tm_column_structure_same:
+  6 / 6
+
+PM_mean_vs_BT10C_linear:
+  max_abs_delta = 3.8469362e-09
+```
+
+したがって、6シート合計116行が揃い、対象6シートすべてでtemplate v1と同じ列構成を維持できた。
+
+また、PM平均はBT10-CのFformLinear_v1再計算結果と一致した。
+
+---
+
+### sheet別確認
+
+対象6シートは以下である。
+
+```text
+tm_108
+tm_161
+tm_164
+tm_F1_108
+tm_F1_161
+tm_F1_164
+```
+
+各シートは、template v1と同じ70列構成で出力された。
+
+```text
+tm_108:
+  noF1 PM = 0.65304894
+  F_form = 0.63608627
+
+tm_161:
+  noF1 PM = 0.62098048
+  F_form = 1.00000000
+
+tm_164:
+  noF1 PM = 0.59786191
+  F_form = 1.2798813
+
+tm_F1_108:
+  F1 PM = 1.1232232
+  F_form = 0.63608627
+
+tm_F1_161:
+  F1 PM = 0.90884087
+  F_form = 1.00000000
+
+tm_F1_164:
+  F1 PM = 0.93956052
+  F_form = 1.2798813
+```
+
+これにより、BT13で見つかった `F_form` 列と `PM/q_calc` 列の不整合は解消した。
+
+---
+
+### 判断
+
+BT13-Bで作成した以下のブックを、今後のバンドル解析入力として採用する。
+
+```text
+H52Q_current_bundle_input_v2_FformLinearRecalc_tmCompatible_20260617_091038.xlsx
+```
+
+このブックは、以下を満たしている。
+
+```text
+- FformLinear_v1再計算済みマクロから作成している。
+- F_form、q_calc、PMが再計算後の値で整合している。
+- template v1と同じtm列構成を維持している。
+- 追加管理列をtmシートに入れていない。
+- F2/F1F2を含まない。
+```
+
+したがって、BT12-A/B/Cのv2は今後の解析入力としては使わない。
+
+```text
+BT12-A:
+  F_form列置換のfull/QC確認用
+
+BT12-B:
+  minimal版。列を削りすぎたため不採用
+
+BT12-C:
+  tm互換だがF_form列だけ置換した版。
+  q_calc/PMがlegacy値のままだったため不採用
+
+BT13-B:
+  FformLinear_v1再計算済みマクロから作成したtmCompatible版。
+  今後の正本入力として採用
+```
+
+---
+
+### BT13の扱い修正
+
+BT13の残差診断は、F_form列とPM列が不整合な入力を読んでいたため、数値診断としては採用しない。
+
+ただし、BT13は無駄ではなく、current_bundle_inputをF_form列だけ置換しても不十分であることを発見した重要なチェックとして残す。
+
+---
+
+### 次アクション
+
+次は、BT13-CまたはBT14として、BT13-Bで作成した正本入力を使い、FformLinear_v1再計算後の残差診断を再実行する。
+
+入力は以下に固定する。
+
+```text
+H52Q_current_bundle_input_v2_FformLinearRecalc_tmCompatible_20260617_091038.xlsx
+```
+
+目的は、以下である。
+
+```text
+- FformLinear_v1再計算後のPM_F1残差を確認する。
+- 108が過大側へ動いたことを正本入力で再確認する。
+- 164が改善側へ動いたことを正本入力で再確認する。
+- F1後残差が、Tsub/x_eq側ではなく、F_form・DNB位置・L/DH側に残るかを再診断する。
+```
+
+ただし、次の診断でも補正式は作らない。
+
+---
+
+---
+
+## 2026-06-17 追記：BT13-C、FformLinear_v1再計算済み正本入力による残差診断の再実行
+
+### 位置づけ
+
+BT13では、BT12-Cで作成したtmCompatible v2を用いて残差診断を行った。
+
+しかし、BT13で読んだ入力は、`F_form` 列だけがFformLinear_v1正本値に置換され、`q_calc / PM / PM_F1` はlegacy F_formで計算された旧値のまま残っていた。
+
+そのため、BT13の数値診断は採用しないことにした。
+
+その後、BT13-Bで、FformLinear_v1再計算済みr125/r126マクロブックから、tm互換のcurrent_bundle_input_v2を作り直した。
+
+BT13-Cでは、そのBT13-B正本入力を使い、BT13相当の残差診断を再実行した。
+
+---
+
+### 入力
+
+```text
+H52Q_current_bundle_input_v2_FformLinearRecalc_tmCompatible_20260617_091038.xlsx
+```
+
+---
+
+### 出力
+
+```text
+BT13C_resid_diag_v2_20260617_091836.xlsx
+
+run_report_BT13C_resid_diag_v2_20260617_091836.md
+```
+
+---
+
+### 前提
+
+```text
+- F2/F1F2は使わない。
+- 比較対象はnoF1とF1のみ。
+- F1(Tsub)は維持する。
+- F1(Tsub)をF(x_eq)へ置換しない。
+- F_formはF1ではなく、非一様加熱分布をDNB位置の局所熱流束基準へ換算する係数である。
+- qM/qPは診断量であり、補正式入力には使わない。
+- BT13-Cでは補正式を作らない。
+```
+
+---
+
+### QC結果
+
+BT13-CのQCは正常であった。
+
+```text
+row_count:
+  58
+
+bundle_count:
+  3
+
+PM_F1_missing:
+  0
+
+PM_noF1_missing:
+  0
+
+F_form_missing:
+  0
+
+Tsub_missing:
+  0
+
+x_eq_missing:
+  0
+
+z_DNB_DH_missing:
+  0
+
+L_DH_missing:
+  0
+```
+
+また、BT13-Bで作成した `F_form/q_calc/PM` 整合済み入力を使用していることも確認した。
+
+したがって、BT13で問題になった、
+
+```text
+F_form列：
+  FformLinear_v1
+
+q_calc / PM列：
+  legacy計算値
+```
+
+という不整合は、BT13-Cでは解消されている。
+
+---
+
+### Bundle summary
+
+FformLinear_v1再計算済み正本入力でのbundle平均は以下であった。
+
+```text
+108:
+  PM_noF1 = 0.65304894
+  PM_F1   = 1.1232232
+  err_F1  = +0.1232232
+  F_form  = 0.63608627
+  Tsub    = 46.083809
+  x_eq    = -0.013990909
+  z_DNB/DH = 139.65871
+  z_DNB/L  = 0.73821634
+  L/DH     = 189.18399
+
+161:
+  PM_noF1 = 0.62098048
+  PM_F1   = 0.90884087
+  err_F1  = -0.091159126
+  F_form  = 1.000000
+  Tsub    = 63.843926
+  x_eq    = -0.082322824
+  z_DNB/DH = 361.35516
+  z_DNB/L  = 0.99707054
+  L/DH     = 362.41684
+
+164:
+  PM_noF1 = 0.59786191
+  PM_F1   = 0.93956052
+  err_F1  = -0.060439484
+  F_form  = 1.2798813
+  Tsub    = 54.954868
+  x_eq    = -0.15527776
+  z_DNB/DH = 286.82405
+  z_DNB/L  = 0.79142031
+  L/DH     = 362.41684
+```
+
+FformLinear_v1再計算後は、108が過大側、161/164が過小側に残る。
+
+BT13以前のlegacy F_form計算時と比べると、108は過大側が強まり、164は改善側へ動いた。
+
+---
+
+### 108と161/164の対比
+
+BT13-Cでは、108と161/164平均の差は以下であった。
+
+```text
+PM_F1:
+  108 = 1.1232232
+  161/164平均 = 0.92350252
+  差 = +0.19972068
+
+err_F1:
+  108 = +0.1232232
+  161/164平均 = -0.076497479
+  差 = +0.19972068
+
+abs_err_F1:
+  108 = 0.1232232
+  161/164平均 = 0.092075598
+  差 = +0.031147605
+```
+
+legacy時代には108はほぼ一致側に近かったが、FformLinear_v1再計算後は、108の過大側が明確になった。
+
+一方、164はlegacy時代よりPM_F1が1に近づき、改善している。
+
+---
+
+### F1後残差とTsub/x_eq
+
+BT13-Cでは、F1後のPM_F1はTsubやx_eqではほとんど説明されなかった。
+
+```text
+PM_F1 vs Tsub:
+  R2 = 0.006302
+
+PM_F1 vs x_eq:
+  R2 = 0.032173
+```
+
+これはBT05〜BT06までの判断と整合する。
+
+すなわち、F1後に残ったPM差は、Tsub/x_eq側の問題としては整理しにくい。
+
+したがって、F1(Tsub)をF(x_eq)へ置換する方向には進まない。
+
+---
+
+### F1後残差とF_form・DNB位置・L/DH
+
+一方、F1後のPM_F1は、F_form、DNB位置、L/DH側とは対応が残った。
+
+```text
+PM_F1 vs F_form:
+  R2 = 0.243220
+
+PM_F1 vs z_DNB/DH:
+  R2 = 0.443518
+
+PM_F1 vs z_DNB/L:
+  R2 = 0.220952
+
+PM_F1 vs L/DH:
+  R2 = 0.476817
+```
+
+さらに、Tsubで残差化した後でも、F_form、z_DNB/DH、L/DHとの対応は残った。
+
+```text
+err_F1 residual after Tsub:
+
+vs F_form:
+  R2 = 0.257010
+
+vs z_DNB/DH:
+  R2 = 0.476275
+
+vs L/DH:
+  R2 = 0.505045
+```
+
+Tsub+x_eqで残差化した後では、むしろL/DHやF_formとの対応が強く残った。
+
+```text
+err_F1 residual after Tsub + x_eq:
+
+vs F_form:
+  R2 = 0.417014
+
+vs z_DNB/DH:
+  R2 = 0.500330
+
+vs L/DH:
+  R2 = 0.613299
+```
+
+したがって、BT13-Cでも、F1後残差はTsub/x_eq側ではなく、F_form・DNB位置・L/DH側に残るという判断が支持された。
+
+---
+
+### ただし、交絡が強い
+
+BT13-Cでは、変数間の交絡も強い。
+
+```text
+F_form vs L/DH:
+  R2 = 0.714179
+
+z_DNB/DH vs L/DH:
+  R2 = 0.853086
+
+z_DNB/DH vs z_DNB/L:
+  R2 = 0.740313
+
+F_form vs z_DNB/DH:
+  R2 = 0.379195
+```
+
+したがって、PM_F1とL/DHやz_DNB/DHの相関が見えても、それを純粋なL/DH効果やDNB履歴長効果とは言えない。
+
+F_formも、L/DHやDNB位置と強く絡んでいる。
+
+そのため、BT13-C時点でも以下の判断を維持する。
+
+```text
+F_form原因説にはしない。
+z_DNB/DH原因説にはしない。
+L/DH原因説にはしない。
+```
+
+これらは、F1後残差を理解するための診断軸として扱う。
+
+---
+
+### q_exp / q_calc_F1との関係
+
+BT13-Cでは、PM_F1とq_exp、q_calc_F1のR2も高かった。
+
+```text
+PM_F1 vs q_exp:
+  R2 = 0.491671
+
+PM_F1 vs q_calc_F1:
+  R2 = 0.608484
+```
+
+また、q_expとq_calc_F1は非常に強く相関していた。
+
+```text
+q_exp vs q_calc_F1:
+  R2 = 0.980474
+```
+
+ただし、q_expおよびq_calc_F1は結果側の量であり、補正式入力として使わない。
+
+これは、108/161/164のq絶対値の大小関係が、実験値にも計算値にも強く入っていることを示す診断結果として扱う。
+
+---
+
+### 探索モデルの扱い
+
+探索モデルでは、以下のような組合せでR2が高くなった。
+
+```text
+PM_F1 ~ Tsub + x_eq + F_form:
+  R2 = 0.692284
+
+PM_F1 ~ Tsub + x_eq + F_form + z_DNB/DH:
+  R2 = 0.722248
+
+PM_F1 ~ Tsub + x_eq + F_form + L/DH:
+  R2 = 0.743553
+```
+
+ただし、これらは補正式候補ではない。
+
+F_form、z_DNB/DH、L/DHは互いに交絡しており、ケース構造を強く含んでいる。
+
+したがって、探索モデルのR2が高いことを理由に、F_form補正式、DNB履歴長補正式、L/DH補正式へは進まない。
+
+---
+
+### 判断
+
+BT13-Cにより、BT13-Bで作成した正本入力を用いた残差診断が完了した。
+
+判断は以下である。
+
+```text
+BT13-Cは採用する。
+
+BT13は不整合入力を読んでいたため、数値診断としては採用しない。
+
+BT13-Cでは、FformLinear_v1再計算後の整合済み入力を使い、108/161/164の残差を再診断できた。
+```
+
+BT13-Cの結果として、以下を採用する。
+
+```text
+- FformLinear_v1再計算後、108は過大側に残る。
+- 161/164は過小側に残る。
+- 164はlegacy時代より改善している。
+- F1後残差は、Tsub/x_eq側ではなく、F_form・DNB位置・L/DH側に残る。
+- ただし、F_form、z_DNB/DH、z_DNB/L、L/DHは強く交絡している。
+- したがって、どれか一つを原因として断定しない。
+```
+
+---
+
+### 現時点で言ってよいこと
+
+```text
+- BT13-Cは、BT13-B正本入力を使った再診断であり、採用できる。
+- FformLinear_v1再計算後は、108のPM_F1が過大側に残る。
+- 164はlegacy時代より改善する。
+- F1後残差はTsub/x_eqではほとんど説明されない。
+- F1後残差はF_form・DNB位置・L/DH側と対応する。
+- ただし、F_form・DNB位置・L/DHは強く交絡している。
+```
+
+---
+
+### まだ言ってはいけないこと
+
+```text
+- F_formが108過大側残差の原因であるとは言わない。
+- z_DNB/DHが原因であるとは言わない。
+- L/DHが原因であるとは言わない。
+- F1(Tsub)をF(x_eq)へ置換すべきとは言わない。
+- F_form補正式、DNB履歴長補正式、L/DH補正式を作るとは言わない。
+- 探索モデルを補正式として採用しない。
+```
+
+---
+
+### 次アクション
+
+次はBT14として、F_form・DNB位置・非一様加熱分布側の扱いを整理する。
+
+BT14で確認すべきことは以下である。
+
+```text
+1. F_formは正本化されたが、その定義は108/161/164で同じ意味になっているか。
+2. F_formの違いは、出力分布形状によるものか、DNB位置によるものか。
+3. 108のF_formが小さい理由を、108の出力分布・DNB位置・z_DNB/Lから説明できるか。
+4. 164のF_formが大きい理由を、164の出力分布・DNB位置・z_DNB/Lから説明できるか。
+5. PM_F1残差を、F_form補正式ではなく、非一様加熱換算・DNB位置診断として残すべきか。
+```
+
+ただし、BT14でも補正式は作らない。
+
+---
+
+---
+
+## 2026-06-17 追記：BT14-A、F_form・DNB位置・非一様加熱分布側の扱い整理
+
+### 位置づけ
+
+BT13-Cでは、BT13-Bで作成したFformLinear_v1再計算済み正本入力を用いて、F1後残差を再診断した。
+
+その結果、F1後残差はTsub/x_eq側ではなく、F_form・DNB位置・L/DH側に残ることを確認した。
+
+ただし、F_form、z_DNB/DH、z_DNB/L、L/DHは強く交絡していた。
+
+そのためBT14-Aでは、F_formを原因と断定する前に、F_formがDNB位置だけで決まっているのか、それとも軸方向出力分布形状やケース構造を強く含むのかを確認した。
+
+---
+
+### 入力
+
+```text
+H52Q_current_bundle_input_v2_FformLinearRecalc_tmCompatible_20260617_091038.xlsx
+```
+
+---
+
+### 出力
+
+```text
+BT14A_Fform_position_shape_diag_20260617_093233.xlsx
+
+run_report_BT14A_Fform_position_shape_diag_20260617_093233.md
+```
+
+---
+
+### 前提
+
+```text
+- F2/F1F2は使わない。
+- F1(Tsub)は維持する。
+- F1(Tsub)をF(x_eq)へ置換しない。
+- F_formはF1ではなく、DNB位置の局所熱流束基準への非一様加熱換算係数である。
+- BT14-AではF_form補正式、DNB位置補正式、L/DH補正式を作らない。
+- current_bundle_inputには軸方向出力分布の元配列がないため、BT14-AはF_form再積分監査ではなく挙動診断である。
+```
+
+---
+
+### QC結果
+
+BT14-AのQCは、データ読み取りとしては正常であった。
+
+```text
+row_count:
+  58
+
+bundle_count:
+  3
+
+PM_F1_missing:
+  0
+
+F_form_missing:
+  0
+
+z_DNB/L_missing:
+  0
+
+z_DNB/DH_missing:
+  0
+
+L/DH_missing:
+  0
+```
+
+一方、以下はCHECKとなった。
+
+```text
+axial_profile_available:
+  CHECK
+  not_in_current_input
+```
+
+これはエラーではなく、BT14-Aの位置づけを示すものである。
+
+`current_bundle_input` には軸方向出力分布の元配列が入っていないため、BT14-AではF_formの青面積／オレンジ面積の再積分監査はできない。
+
+したがって、BT14-Aは以下の位置づけで扱う。
+
+```text
+BT14-A：
+  F_form挙動診断
+
+BT14-Aではできないこと：
+  F_formの再積分監査
+  軸方向出力分布そのものからのF_form再計算
+```
+
+---
+
+### Bundle summary
+
+BT14-Aでのbundle平均は以下であった。
+
+```text
+108:
+  PM_F1      = 1.1232232
+  err_F1     = +0.1232232
+  F_form     = 0.63608627
+  z_DNB/DH   = 139.65871
+  z_DNB/L    = 0.73821634
+  L/DH       = 189.18399
+
+161:
+  PM_F1      = 0.90884087
+  err_F1     = -0.091159126
+  F_form     = 1.00000000
+  z_DNB/DH   = 361.35516
+  z_DNB/L    = 0.99707054
+  L/DH       = 362.41684
+
+164:
+  PM_F1      = 0.93956052
+  err_F1     = -0.060439484
+  F_form     = 1.2798813
+  z_DNB/DH   = 286.82405
+  z_DNB/L    = 0.79142031
+  L/DH       = 362.41684
+```
+
+FformLinear_v1再計算後でも、108は過大側、161/164は過小側に残る。
+
+---
+
+### Case summary
+
+case_group別には以下であった。
+
+```text
+108_70in:
+  PM_F1    = 1.1166142
+  F_form   = 0.61982066
+  z_DNB/L  = 0.7292863
+  z_DNB/DH = 137.96929
+  L/DH     = 189.18399
+
+108_76in:
+  PM_F1    = 1.1628772
+  F_form   = 0.73367994
+  z_DNB/L  = 0.79179655
+  z_DNB/DH = 149.79523
+  L/DH     = 189.18399
+
+161_uniform:
+  PM_F1    = 0.90884087
+  F_form   = 1.00000000
+  z_DNB/L  = 0.99707054
+  z_DNB/DH = 361.35516
+  L/DH     = 362.41684
+
+164_134in_normal:
+  PM_F1    = 0.94666661
+  F_form   = 1.2999932
+  z_DNB/L  = 0.79765643
+  z_DNB/DH = 289.08413
+  L/DH     = 362.41684
+
+164_112in:
+  PM_F1    = 0.79743867
+  F_form   = 0.8776443
+  z_DNB/L  = 0.66669791
+  z_DNB/DH = 241.62255
+  L/DH     = 362.41684
+```
+
+---
+
+### 近いDNB相対位置でもF_formが大きく違う
+
+BT14-Aで特に重要なのは、z_DNB/Lが近いのにF_formが大きく違うペアが存在することである。
+
+代表例は以下である。
+
+```text
+108_76in vs 164_134in_normal:
+
+delta_z_DNB/L:
+  -0.0058598785
+
+delta_F_form:
+  -0.56631323
+
+delta_PM_F1:
+  +0.21621055
+```
+
+この2ケースは、DNB相対位置 `z_DNB/L` はほぼ同じである。
+
+しかし、F_formは大きく異なる。
+
+したがって、F_formはDNB相対位置だけで決まる量ではない。
+
+F_formは、DNB位置に加えて、軸方向出力分布形状、局所熱流束基準、L/DH、ケース構造を強く含む量と読むべきである。
+
+もう一つの例として、以下も同じ傾向を示す。
+
+```text
+108_70in vs 164_134in_normal:
+
+delta_z_DNB/L:
+  -0.068370133
+
+delta_F_form:
+  -0.68017251
+
+delta_PM_F1:
+  +0.1699476
+```
+
+このため、BT14-Aでは以下を採用する。
+
+```text
+F_formはDNB位置だけでは説明できない。
+F_formには軸方向出力分布形状が強く入っている可能性が高い。
+```
+
+---
+
+### F_formと各軸の関係
+
+BT14-Aでは、F_formと各軸の関係を確認した。
+
+```text
+F_form vs z_DNB/L:
+  R2 = 0.028403
+
+F_form vs z_DNB/DH:
+  R2 = 0.379195
+
+F_form vs L/DH:
+  R2 = 0.714179
+
+F_form vs case_group_dummy:
+  R2 = 1.000000
+```
+
+F_formは、z_DNB/L単独ではほとんど説明されない。
+
+一方で、L/DHとは強く対応している。
+
+ただし、これはL/DHが直接F_formを決めているという意味ではない。
+
+108、161、164では、L/DH、軸方向出力分布、DNB位置、ケース番号が一体で変化している。
+
+したがって、F_formとL/DHの高いR2は、ケース構造との交絡として読む。
+
+---
+
+### F_formとPM_F1残差
+
+PM_F1との対応は以下であった。
+
+```text
+PM_F1 vs F_form:
+  R2 = 0.243220
+
+PM_F1 vs z_DNB/L:
+  R2 = 0.220952
+
+PM_F1 vs z_DNB/DH:
+  R2 = 0.443518
+
+PM_F1 vs L/DH:
+  R2 = 0.476817
+```
+
+F_formとPM_F1には対応がある。
+
+しかし、z_DNB/DHやL/DHの方がPM_F1とのR2は高い。
+
+また、複数軸を組み合わせるとR2は上がる。
+
+```text
+PM_F1 ~ F_form + z_DNB/L:
+  R2 = 0.397320
+
+PM_F1 ~ F_form + z_DNB/DH:
+  R2 = 0.454636
+
+PM_F1 ~ F_form + L/DH:
+  R2 = 0.505395
+
+PM_F1 ~ F_form + z_DNB/L + L/DH:
+  R2 = 0.516477
+```
+
+ただし、これらは補正式候補ではない。
+
+BT14-Aでは、これらを以下のように読む。
+
+```text
+PM_F1残差は、F_form単独ではなく、
+F_form、DNB位置、L/DH、ケース構造の複合と対応している。
+```
+
+---
+
+### 交絡の確認
+
+BT14-Aでは、変数間の交絡も強かった。
+
+```text
+F_form vs L/DH:
+  R2 = 0.714179
+
+F_form vs z_DNB/DH:
+  R2 = 0.379195
+
+z_DNB/DH vs L/DH:
+  R2 = 0.853086
+
+z_DNB/L vs z_DNB/DH:
+  R2 = 0.740313
+```
+
+特に、z_DNB/DHとL/DHの交絡が非常に強い。
+
+また、F_formとL/DHも強く対応している。
+
+このため、PM_F1残差とF_form、z_DNB/DH、L/DHの対応が見えても、以下のどれか一つに原因を決めることはできない。
+
+```text
+F_form原因説
+DNB位置原因説
+L/DH原因説
+```
+
+---
+
+### q_exp / q_calc_F1との関係
+
+BT14-Aでは、F_formやL/DHとq_exp/q_calc_F1の対応も高かった。
+
+```text
+F_form vs q_exp:
+  R2 = 0.739207
+
+F_form vs q_calc_F1:
+  R2 = 0.702657
+
+L/DH vs q_exp:
+  R2 = 0.889268
+
+L/DH vs q_calc_F1:
+  R2 = 0.909250
+```
+
+ただし、q_expやq_calc_F1は結果側の量である。
+
+したがって、これらは補正式候補ではなく、ケース構造および熱流束レベルとの対応を示す診断量として扱う。
+
+---
+
+### BT14-Aの判断
+
+BT14-Aの判断は以下である。
+
+```text
+BT14-Aは採用する。
+
+ただし、BT14-AはF_form再積分監査ではなく、F_form挙動診断である。
+```
+
+BT14-Aで分かったことは以下である。
+
+```text
+- F_formはDNB相対位置 z_DNB/L だけでは説明できない。
+- z_DNB/Lが近くても、108と164ではF_formが大きく異なるケースがある。
+- したがって、F_formには軸方向出力分布形状が強く入っている可能性が高い。
+- F_formはL/DHやケース構造と強く交絡している。
+- PM_F1残差はF_form単独ではなく、F_form、DNB位置、L/DH、ケース構造の複合と対応している。
+```
+
+---
+
+### 現時点で言ってよいこと
+
+```text
+- F_formはF1ではない。
+- F_formは非一様加熱分布をDNB位置の局所熱流束基準へ換算する係数である。
+- F_formはDNB相対位置だけでは決まらない。
+- F_formには軸方向出力分布形状、DNB位置、L/DH、ケース構造が含まれている可能性が高い。
+- PM_F1残差は、F_form、DNB位置、L/DH、ケース構造と対応する。
+- ただし、どれか一つを原因として断定しない。
+```
+
+---
+
+### まだ言ってはいけないこと
+
+```text
+- F_formがPM_F1残差の原因であるとは言わない。
+- z_DNB/Lが原因であるとは言わない。
+- z_DNB/DHが原因であるとは言わない。
+- L/DHが原因であるとは言わない。
+- F_form補正式を作るとは言わない。
+- DNB位置補正式を作るとは言わない。
+- L/DH補正式を作るとは言わない。
+- BT14-AだけでF_form定義が正しいと断定しない。
+```
+
+---
+
+### 次アクション
+
+BT14-Aでは、current_bundle_inputに軸方向出力分布の元配列がないため、F_formの再積分監査はできなかった。
+
+したがって、次に進むならBT14-Bとして、F_form作成元の軸方向出力分布を用いた再積分監査を行う。
+
+BT14-Bで確認すべきことは以下である。
+
+```text
+1. F_form = 青面積 / オレンジ面積 が、108/161/164で正しく計算されているか。
+2. DNB位置の補間方法が妥当か。
+3. 軸方向出力分布の積分範囲がDNB位置までになっているか。
+4. 108_70in、108_76in、164_112in、164_134in_normalで、F_formが手計算・数値積分と一致するか。
+5. FformLinear_v1が、マクロ入力に反映されている値と一致するか。
+```
+
+BT14-Bでも補正式は作らない。
+
+BT14-Bの目的は、F_form定義と実装の監査である。
+
+---
+
+---
+
+## 2026-06-17 追記：BT14-B2、F_form linear_v1実装照合の完了とBT14の閉じ
+
+### 位置づけ
+
+BT14-Aでは、`current_bundle_input` だけでは軸方向出力分布の元配列がなく、F_formの再積分監査まではできないことを確認した。
+
+そのため、BT14-Bでは、過去に実施したBT08-A1dのF_form再積分監査結果を再利用し、F_form定義を `linear_v1` として正本化する方針にした。
+
+ただし、最初のBT14-Bでは、BT13-B正本入力である `H52Q_current_bundle_input_v2_FformLinearRecalc_tmCompatible_20260617_091038.xlsx` を読み込めず、`current_rows = 0` となった。
+
+したがって、BT14-Bの時点では、F_form定義の正本化方針は妥当だったが、current inputとの照合は未完了であった。
+
+BT14-B2では、この未完了だったcurrent input照合をやり直した。
+
+---
+
+### 入力
+
+```text
+current input:
+H52Q_current_bundle_input_v2_FformLinearRecalc_tmCompatible_20260617_091038.xlsx
+
+BT08-A1d report:
+run_report_BT08A1d_Fform_linear_finalize_20260616_144056.md
+
+BT14-A report:
+run_report_BT14A_Fform_position_shape_diag_20260617_093233.md
+
+previous BT14-B report:
+run_report_BT14B_Fform_reintegration_audit_closure_20260617_094603.md
+```
+
+---
+
+### 出力
+
+```text
+BT14B2_Fform_consistency_check_20260617_095120.xlsx
+
+run_report_BT14B2_Fform_consistency_check_20260617_095120.md
+```
+
+---
+
+### F_form linear_v1定義
+
+BT14-B2では、BT08-A1dで確定した以下の定義を正本として扱った。
+
+```text
+x_DNB = DNB位置 / 加熱長
+
+f_DNB = interp1(x, f, x_DNB)
+
+Blue_area_linear = integral_0^x_DNB f(x) dx
+
+Orange_area_linear = x_DNB * f_DNB
+
+F_form_linear = Blue_area_linear / Orange_area_linear
+```
+
+この定義は、F_formをF1として扱うものではない。
+
+F_formは、非一様加熱分布をDNB位置の局所熱流束基準へ換算する係数である。
+
+---
+
+### QC結果
+
+BT14-B2のQCは正常であった。
+
+```text
+target_sheet_map:
+  6 / 6 OK
+
+sheet_read:
+  6 / 6 OK
+
+current_rows:
+  116 OK
+
+current_Fform_vs_linear_v1:
+  OK
+  max_abs_delta = 3.078041e-08
+```
+
+対象6シートはすべて正しく読み込めた。
+
+```text
+tm_108:
+  14 rows
+
+tm_161:
+  23 rows
+
+tm_164:
+  21 rows
+
+tm_F1_108:
+  14 rows
+
+tm_F1_161:
+  23 rows
+
+tm_F1_164:
+  21 rows
+```
+
+合計で、noF1 58行 + F1 58行 = 116行である。
+
+したがって、BT14-Bで起きたcurrent input未読問題は解消した。
+
+---
+
+### canonical F_form linear_v1
+
+BT08-A1d由来の正本F_formは以下である。
+
+```text
+108_70in:
+  F_form_linear_v1 = 0.61982066
+
+108_76in:
+  F_form_linear_v1 = 0.73367994
+
+161_uniform:
+  F_form_linear_v1 = 1.00000000
+
+164_112in:
+  F_form_linear_v1 = 0.87764430
+
+164_134in_normal:
+  F_form_linear_v1 = 1.29999320
+```
+
+これらは、すべて線形補間・線形積分で統一した値である。
+
+---
+
+### current inputとの照合
+
+BT13-B正本入力内のF_form平均は以下であった。
+
+```text
+108_70in:
+  current F_form = 0.61982066
+
+108_76in:
+  current F_form = 0.73367994
+
+161_uniform:
+  current F_form = 1.00000000
+
+164_112in:
+  current F_form = 0.87764430
+
+164_134in_normal:
+  current F_form = 1.29999320
+```
+
+BT08-A1dのlinear_v1正本値との差は、最大でも以下であった。
+
+```text
+max_abs_delta:
+  3.078041e-08
+```
+
+したがって、BT13-B正本入力のF_formは、BT08-A1dで確定したlinear_v1と一致している。
+
+---
+
+### consistency check
+
+case別の照合結果はすべてOKであった。
+
+```text
+108_70in:
+  OK_current_matches_linear_v1
+
+108_76in:
+  OK_current_matches_linear_v1
+
+161_uniform:
+  OK_current_matches_linear_v1
+
+164_112in:
+  OK_current_matches_linear_v1
+
+164_134in_normal:
+  OK_current_matches_linear_v1
+```
+
+これにより、F_form定義、F_form実装、current input反映の三者が整合した。
+
+---
+
+### near-position examples
+
+BT14-B2でも、BT14-Aで見た重要な構図は維持された。
+
+代表例は以下である。
+
+```text
+108_76in vs 164_134in_normal:
+
+delta_z_DNB_ratio:
+  -0.005952
+
+delta_Fform_linear_v1:
+  -0.56631326
+
+delta_PM_F1_current:
+  +0.21621055
+
+delta_L_DH_current:
+  -173.23285
+```
+
+この2ケースは、DNB相対位置が非常に近いにもかかわらず、F_formが大きく異なる。
+
+したがって、F_formはDNB相対位置だけで決まる量ではない。
+
+F_formには、軸方向出力分布形状、DNB位置、L/DH、ケース構造が含まれていると読むべきである。
+
+ただし、この結果をもって、F_formがPM_F1残差の原因であるとは断定しない。
+
+---
+
+### BT14-B2の判断
+
+BT14-B2の判断は以下である。
+
+```text
+BT14-B2は採用する。
+
+BT14-Bで未完だったcurrent input照合は、BT14-B2で完了した。
+
+BT13-B正本入力のF_formは、BT08-A1dのlinear_v1正本値と一致した。
+
+したがって、F_form実装監査は閉じられる。
+```
+
+decision flagsでも、以下の判断になった。
+
+```text
+Fform_definition:
+  adopt
+  linear_v1
+
+Fform_reintegration_audit:
+  adopt
+  reuse_BT08A1d
+
+current_input_status:
+  adopt
+  matches_linear_v1
+
+BT14_status:
+  close_ready
+  Fform_audit_closed
+
+legacy_policy:
+  adopt
+  trace_only
+
+Fform_causal_claim:
+  do_not_claim
+  not_cause_yet
+
+formula_policy:
+  do_not_create
+  no_Fform_DNB_LDH_formula
+```
+
+---
+
+### F_formの今後の扱い
+
+今後のF_formの扱いを以下のように固定する。
+
+```text
+採用：
+  F_form = linear_v1
+
+採用：
+  BT08-A1dの線形補間・線形積分定義を正本とする。
+
+採用：
+  BT13-B正本入力のF_formはlinear_v1と一致している。
+
+採用：
+  legacy F_formは履歴・比較用として残す。
+
+不採用：
+  legacy F_formを今後の感度解析入力に使うこと。
+
+禁止：
+  F_form補正式を作ること。
+  DNB位置補正式を作ること。
+  L/DH補正式を作ること。
+  F_formをPM_F1残差の原因と断定すること。
+```
+
+---
+
+### BT14全体の閉じ
+
+BT14は以下の構成で閉じる。
+
+```text
+BT14-A:
+  F_form・DNB位置・L/DHの挙動診断。
+  F_formはDNB相対位置だけでは決まらず、
+  軸方向出力分布形状、DNB位置、L/DH、ケース構造を含むと整理した。
+
+BT14-B:
+  BT08-A1dのlinear_v1定義を正本として再利用する方針を立てた。
+  ただし、current inputの読み込みが0行で照合未完だったため、採用保留。
+
+BT14-B2:
+  BT14-Bの未完照合を修正。
+  BT13-B正本入力のF_formがBT08-A1d linear_v1と一致することを確認。
+  F_form実装監査を閉じる。
+```
+
+したがって、BT14全体としては、
+
+```text
+F_formはlinear_v1で正本化済み。
+BT13-B正本入力にも反映済み。
+F_formの定義・実装監査は完了。
+ただし、F_formを残差原因とは断定しない。
+```
+
+と整理する。
+
+---
+
+### 現時点で言ってよいこと
+
+```text
+- F_formはF1ではない。
+- F_formは非一様加熱分布をDNB位置の局所熱流束基準へ換算する係数である。
+- F_form定義はBT08-A1dのlinear_v1を正本とする。
+- BT13-B正本入力のF_formはlinear_v1と一致している。
+- legacy F_formは履歴・比較用であり、今後の解析入力には使わない。
+- BT14-Aの結果から、F_formはDNB相対位置だけで決まる量ではない。
+- F_formには軸方向出力分布形状、DNB位置、L/DH、ケース構造が含まれる可能性が高い。
+```
+
+---
+
+### まだ言ってはいけないこと
+
+```text
+- F_formがPM_F1残差の原因であるとは言わない。
+- F_form補正式を作るとは言わない。
+- DNB位置補正式を作るとは言わない。
+- L/DH補正式を作るとは言わない。
+- BT14-A/B2だけでF_formが物理的な最終説明変数であるとは言わない。
+```
+
+---
+
+### 次アクション
+
+BT14はここで閉じる。
+
+次に進むなら、BT15として以下を整理する。
+
+```text
+BT15：
+  F_form正本化後の全体判断整理
+
+目的：
+  - BT13-Cの残差診断
+  - BT14-AのF_form挙動診断
+  - BT14-B2のF_form実装照合
+  を統合し、今後の解析方針を整理する。
+```
+
+BT15でも、補正式は作らない。
+
+---
+
+---
+
+## 2026-06-17 追記：BT15、F_form正本化後の全体判断整理
+
+### 位置づけ
+
+BT15では、BT13-C、BT14-A、BT14-B2の結果を統合し、F_form正本化後の全体判断を整理した。
+
+BT15は補正式を作る作業ではない。
+
+目的は、F_formをlinear_v1で正本化した後に、今後どの入力を使い、何を採用し、何を不採用とし、何をまだ主張しないかを固定することである。
+
+---
+
+### 入力
+
+```text
+current input:
+H52Q_current_bundle_input_v2_FformLinearRecalc_tmCompatible_20260617_091038.xlsx
+
+BT13-C report:
+run_report_BT13C_resid_diag_v2_20260617_091836.md
+
+BT14-A report:
+run_report_BT14A_Fform_position_shape_diag_20260617_093233.md
+
+BT14-B2 report:
+run_report_BT14B2_Fform_consistency_check_20260617_095120.md
+
+previous BT14-B report:
+run_report_BT14B_Fform_reintegration_audit_closure_20260617_094603.md
+```
+
+---
+
+### 出力
+
+```text
+BT15_Fform_decision_package_20260617_100701.xlsx
+
+run_report_BT15_Fform_decision_package_20260617_100701.md
+```
+
+---
+
+### QC結果
+
+BT15のQCは正常であった。
+
+```text
+current_input_exists:
+  OK
+
+BT13C_report_exists:
+  OK
+
+BT14A_report_exists:
+  OK
+
+BT14B2_report_exists:
+  OK
+
+current_rows:
+  116 OK
+
+bundle_summary_rows:
+  3 OK
+
+case_summary_rows:
+  5 OK
+
+BT15_formula_policy:
+  no_new_formula OK
+
+BT15_F1_policy:
+  keep_F1_Tsub OK
+
+BT15_Fform_policy:
+  linear_v1 OK
+```
+
+これにより、BT13-B正本入力、BT13-C残差診断、BT14-A挙動診断、BT14-B2実装照合がそろった状態で、F_form正本化後の判断を整理できた。
+
+---
+
+### 採用する正本入力
+
+今後のバンドル解析入力として、以下を採用する。
+
+```text
+H52Q_current_bundle_input_v2_FformLinearRecalc_tmCompatible_20260617_091038.xlsx
+```
+
+この入力は、FformLinear_v1再計算済みのtmCompatible正本入力である。
+
+F_form、q_calc、PMがFformLinear_v1再計算後の値で整合している。
+
+---
+
+### F_formの正本定義
+
+F_formは以下の値を正本とする。
+
+```text
+108_70in:
+  F_form_linear_v1 = 0.61982066
+
+108_76in:
+  F_form_linear_v1 = 0.73367994
+
+161_uniform:
+  F_form_linear_v1 = 1.00000000
+
+164_112in:
+  F_form_linear_v1 = 0.87764430
+
+164_134in_normal:
+  F_form_linear_v1 = 1.29999320
+```
+
+この定義は、BT08-A1dで定義した `linear_v1` である。
+
+すなわち、線形補間・線形積分に基づく以下の定義を正本とする。
+
+```text
+x_DNB = DNB位置 / 加熱長
+
+f_DNB = interp1(x, f, x_DNB)
+
+Blue_area_linear = integral_0^x_DNB f(x) dx
+
+Orange_area_linear = x_DNB * f_DNB
+
+F_form_linear = Blue_area_linear / Orange_area_linear
+```
+
+F_formはF1ではない。
+
+F_formは、非一様加熱分布をDNB位置の局所熱流束基準へ換算する係数である。
+
+---
+
+### BT13-Cの残差診断の扱い
+
+BT13-Cでは、FformLinear_v1再計算済み正本入力を使って、F1後残差を再診断した。
+
+bundle平均は以下であった。
+
+```text
+108:
+  PM_noF1 = 0.65304894
+  PM_F1   = 1.1232232
+  err_F1  = +0.1232232
+  F_form  = 0.63608627
+  Tsub    = 46.083809
+  x_eq    = -0.013990909
+  z_DNB/L  = 0.73821634
+  z_DNB/DH = 139.65871
+  L/DH     = 189.18399
+
+161:
+  PM_noF1 = 0.62098048
+  PM_F1   = 0.90884087
+  err_F1  = -0.091159126
+  F_form  = 1.00000000
+  Tsub    = 63.843926
+  x_eq    = -0.082322824
+  z_DNB/L  = 0.99707054
+  z_DNB/DH = 361.35516
+  L/DH     = 362.41684
+
+164:
+  PM_noF1 = 0.59786191
+  PM_F1   = 0.93956052
+  err_F1  = -0.060439484
+  F_form  = 1.2798813
+  Tsub    = 54.954868
+  x_eq    = -0.15527776
+  z_DNB/L  = 0.79142031
+  z_DNB/DH = 286.82405
+  L/DH     = 362.41684
+```
+
+FformLinear_v1再計算後は、108が過大側、161/164が過小側に残る。
+
+この傾向は診断結果として採用する。
+
+ただし、これをF_form原因説とはしない。
+
+---
+
+### BT14-Aの扱い
+
+BT14-Aでは、F_form、DNB位置、L/DHの挙動を診断した。
+
+その結果、F_formはDNB相対位置だけでは決まらないことを確認した。
+
+特に、108_76inと164_134in_normalは、z_DNB/Lが近いにもかかわらず、F_formが大きく異なる。
+
+```text
+108_76in vs 164_134in_normal:
+
+delta_z_DNB_ratio:
+  -0.005952
+
+delta_Fform_linear_v1:
+  -0.56631326
+
+delta_PM_F1_current:
+  +0.21621055
+
+delta_L_DH_current:
+  -173.23285
+```
+
+したがって、F_formはDNB相対位置だけではなく、軸方向出力分布形状、DNB位置、L/DH、ケース構造を含む量として扱う。
+
+ただし、F_formがPM_F1残差の原因であるとは断定しない。
+
+---
+
+### BT14-B2の扱い
+
+BT14-B2では、BT13-B正本入力のF_formが、BT08-A1dのlinear_v1正本値と一致するかを確認した。
+
+結果はすべてOKであった。
+
+```text
+current_Fform_vs_linear_v1:
+  OK
+  max_abs_delta = 3.078041e-08
+```
+
+case別にも、すべて一致した。
+
+```text
+108_70in:
+  OK_current_matches_linear_v1
+
+108_76in:
+  OK_current_matches_linear_v1
+
+161_uniform:
+  OK_current_matches_linear_v1
+
+164_112in:
+  OK_current_matches_linear_v1
+
+164_134in_normal:
+  OK_current_matches_linear_v1
+```
+
+これにより、F_form定義、F_form実装、current input反映の三者が整合した。
+
+したがって、BT14は閉じる。
+
+---
+
+### 採用する判断
+
+BT15で採用する判断は以下である。
+
+```text
+- F_formはBT08-A1dのlinear_v1を正本とする。
+- BT13-B正本入力のF_formはlinear_v1と一致している。
+- 今後のバンドル解析入力は、BT13-B正本入力を使う。
+- legacy F_formは履歴・比較用であり、今後の解析入力には使わない。
+- BT13-Cの残差診断は、正本入力による診断結果として採用する。
+- F1(Tsub)は維持する。
+- F1(Tsub)をF(x_eq)へ置換しない。
+- F_form、DNB位置、L/DHは診断軸として扱う。
+```
+
+---
+
+### 不採用・旧扱い
+
+以下は不採用または旧扱いとする。
+
+```text
+BT12-A full版:
+  F_form列置換のQC用。
+  q_calc/PMはlegacyのままなので正本入力にはしない。
+
+BT12-B minimal版:
+  列を削りすぎたため不採用。
+
+BT12-C F_form列だけ置換版:
+  tm互換だが、F_formだけlinearで、PM/q_calcがlegacyだったため不採用。
+
+BT13 初回残差診断:
+  不整合入力を読んでいたため、数値診断としては不採用。
+
+legacy F_form:
+  旧定義であり、今後の解析入力には使わない。
+  履歴・比較用としてのみ残す。
+
+F2/F1F2:
+  今回の比較対象外。
+```
+
+---
+
+### まだ言ってはいけないこと
+
+BT15時点でも、以下はまだ言わない。
+
+```text
+- F_formがPM_F1残差の原因である。
+- DNB位置が原因である。
+- L/DHが原因である。
+- F_form補正式を作る。
+- DNB位置補正式を作る。
+- L/DH補正式を作る。
+- F1(Tsub)をF(x_eq)へ置換する。
+- F_formが最終的な物理説明変数である。
+```
+
+理由は、F_form、DNB位置、L/DH、ケース構造が強く交絡しているためである。
+
+---
+
+### リスク・保留事項
+
+BT15後も、以下のリスクは残る。
+
+```text
+F_form原因説への飛躍:
+  原因とは言わず、診断項として扱う。
+
+L/DH補正式への飛躍:
+  L/DHは複合代理として扱う。
+
+x_eq置換への飛躍:
+  F1(Tsub)維持を明記する。
+
+BT13初回結果の混入:
+  BT13は不整合入力として不採用にする。
+
+legacy F_formの再利用:
+  legacyは履歴・比較用に限定する。
+
+3ケースでの一般化:
+  追加ケースまたは外部データ確認まで一般化しない。
+```
+
+---
+
+### BT15の結論
+
+BT15により、F_form正本化後の判断を整理した。
+
+今後のバンドル解析入力は、BT13-Bで作成した以下を正本とする。
+
+```text
+H52Q_current_bundle_input_v2_FformLinearRecalc_tmCompatible_20260617_091038.xlsx
+```
+
+F_formはlinear_v1で固定する。
+
+F1(Tsub)は維持する。
+
+追加補正式は作らない。
+
+108/161/164の残差は、補正式化ではなく、非一様加熱換算、DNB位置、L/DH、ケース構造、適用範囲の診断課題として残す。
+
+---
+
+### 次アクション
+
+BT15は、F_form正本化後の判断ゲートとして閉じる。
+
+次に進むなら、以下のいずれかである。
+
+```text
+BT16:
+  F_form正本化後の判断を内部説明・発表用に整理する。
+
+ST-BT05:
+  単管側で、Hsub/P/Tsub後のx_eq独立効果を確認する。
+
+source01原本確認:
+  Table9/10/11/12の装置・系列・表注が数値診断と矛盾しないか確認する。
+
+Bundle additional cases:
+  108/161/164以外にも同じ傾向があるか確認する。
+```
+
+現時点では、BT16として内部説明・発表用の整理に進むのが自然である。
+
+---
+
+---
+
+## 2026-06-17 追記：ST-BT05 v3、単管側におけるx_eq独立効果の確認
+
+### 位置づけ
+
+ST-BT05では、単管側で `x_eq` が本当に独立した説明力を持つのかを確認した。
+
+ここまでの検討では、T&M source01 Table9〜12に対して、`Hsub + P + x_eq` を入れると、Table12 longの正残差がかなり整理されることが分かっていた。
+
+しかし、それだけでは、`x_eq` が本当に独立に効いているのか、それとも `Hsub`、`P`、`Tsub` の代理として効いているだけなのかが分からなかった。
+
+今回の目的は、バンドル側でのBT05と対応させて、単管側でも `Hsub/P/Tsub` 後に `x_eq` がまだ効くかを確認することである。
+
+---
+
+### v1とv2の扱い
+
+ST-BT05 v1は採用しない。
+
+v1では、`current_single_tube_input` の `ST_F1_T8_14_current` だけを読んだため、`Hsub_true` と `x_eq` が欠損し、目的の診断ができなかった。
+
+ST-BT05 v2も採用しない。
+
+v2では、`hlg` の結合元に `tm_F1_ST` を使ったため、結合後の対象が86行に縮退した。これはTable9〜12全体の比較として不十分だった。
+
+したがって、ST-BT05の正本結果はv3とする。
+
+---
+
+### v3の入力
+
+```text
+v10 file:
+TM8_14_explorelow_truehsub_v10_20260615_134041.xlsx
+
+v10 sheet:
+target_rows_T8_12
+
+r8 file:
+20260612_計算結果比較r8_result_文献追加用.xlsx
+
+r8 sheet:
+tm_r124_F1_T8_14
+```
+
+v3では、v10の `target_rows_T8_12` と r8の `tm_r124_F1_T8_14` を `No_TableNo` で結合した。
+
+そのうえで、`qP_F1`、`G`、`L/D`、`Hsub_true`、`hlg` から、予測側の熱平衡クオリティ `x_eq_qP_F1` を計算した。
+
+---
+
+### v3のQC
+
+v3のQCは正常であった。
+
+```text
+v10_raw_rows:
+  192 OK
+
+r8_raw_rows:
+  224 OK
+
+join_rows_T8_12:
+  192 OK
+
+target_Table9_12_rows:
+  176 OK
+
+Hsub_missing:
+  0 OK
+
+P_missing:
+  0 OK
+
+Tsub_missing:
+  0 OK
+
+hlg_missing:
+  0 OK
+
+x_eq_missing:
+  0 OK
+
+model_OK_count:
+  13/13 OK
+```
+
+これにより、Table9〜12の176行を対象として、Hsub、P、Tsub、x_eqを含む診断が可能になった。
+
+---
+
+### 主要結果
+
+単管側では、`x_eq` は `Hsub/P/Tsub` 後にも追加説明力を持っていた。
+
+代表的な結果は以下である。
+
+```text
+Hsub + P + Tsub:
+  R2 = 0.81387261
+
+Hsub + P + Tsub + x_eq:
+  R2 = 0.92420685
+
+delta_R2:
+  0.11033425
+```
+
+また、残差化後の診断でも、`Hsub + P + Tsub` 後の残差に対して、`x_eq` はまだ説明力を持っていた。
+
+```text
+residual after Hsub + P + Tsub vs x_eq:
+  R2 = 0.14678769
+```
+
+したがって、単管側では、`x_eq` または熱平衡状態に相当する変数が、`Hsub/P/Tsub` では吸収しきれない情報を持つ可能性がある。
+
+---
+
+### 注意点
+
+ただし、`x_eq` を純粋な独立物理量として扱うのは危険である。
+
+v3では、`x_eq` と `L/D` の相関が強かった。
+
+```text
+x_eq vs L/D:
+  R2 = 0.74249103
+```
+
+また、`Hsub_true` と `Tsub` もほぼ同じ情報を持っていた。
+
+```text
+Hsub_true vs Tsub:
+  R2 = 0.99309142
+```
+
+したがって、今回見えている `x_eq` の効果は、単純な平衡クオリティ効果ではなく、加熱長、L/D、二相発達履歴、熱履歴を含んだ複合的な状態量として読むべきである。
+
+---
+
+### バンドル側との比較
+
+バンドル側では、BT05により、`x_eq` は `Tsub` に対する追加説明力が小さいと整理されていた。
+
+一方、単管側では、今回のST-BT05 v3により、`Hsub/P/Tsub` 後でも `x_eq` が追加説明力を持つことが確認された。
+
+したがって、現時点では以下の読みができる。
+
+```text
+単管：
+  x_eq / 熱平衡状態 / 二相発達履歴が効く。
+
+バンドル：
+  x_eqはTsubに対して追加説明力が小さい。
+  F1(Tsub)をF(x_eq)へ置換する根拠は弱い。
+
+比較：
+  単管では効くものが、バンドルでは同じようには効かない。
+  これは単管とバンドルの差として読む価値がある。
+```
+
+これは失敗ではない。
+
+むしろ当初の目的であった、
+
+```text
+単管で補正候補を見つける。
+それをバンドルへ持ち込む。
+効かなければ、単管とバンドルの差として読む。
+```
+
+という方針に対して、重要な結果である。
+
+---
+
+### 現時点の判断
+
+```text
+採用：
+  ST-BT05 v3を採用する。
+
+採用：
+  単管では、Hsub/P/Tsub後にもx_eqが追加説明力を持つ。
+
+保留：
+  x_eqが純粋な独立効果なのか、
+  L/D・沸騰履歴・二相発達の代理なのかは未確定。
+
+バンドルへの扱い：
+  x_eq補正式として即移植しない。
+  単管とバンドルの差として読む。
+
+不採用：
+  ST-BT05 v1
+  ST-BT05 v2
+
+禁止：
+  ST-BT05 v3だけでF(x_eq)補正式を作ること。
+```
+
+---
+
+### 次の作業判断
+
+ここで、単管・バンドル比較のための追加計算は一旦止める。
+
+残る論点は以下である。
+
+```text
+1. 単管で見えたx_eq効果は、純粋なx_eq効果か、L/D・熱履歴の代理か。
+2. バンドルでx_eqが効きにくい理由は何か。
+3. F1(Tsub)を維持する判断でよいか。
+4. L/D・熱履歴の検証は、Becker等の追加文献待ちでよいか。
+```
+
+次は、Claude Codeに全データを渡し、セカンドオピニオンを受ける。
+
+---
