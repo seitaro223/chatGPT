@@ -1,7 +1,0 @@
-Metric,Value,Note
-T8_middle_source,03,Table8 middle の source
-T9_source,01,Table9 の主 source
-PWR_near_source,01,PWR_near Table10-12 の主 source
-Delta_PM_F1_T8middle_minus_T9all,-0.44614,Table8 middle と Table9 all の PM_F1差
-Delta_P_T8middle_minus_T9all,-1.0213,Table8 middle と Table9 all の P差
-Delta_xMes_T8middle_minus_T9all,0.27143,Table8 middle と Table9 all の xMes差
