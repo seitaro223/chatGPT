@@ -1,0 +1,71 @@
+﻿macro_sheet,macro_col_letter,macro_col_index,macro_header,row_role,classification,manifest_candidate_column,unit_in_macro,unit_in_manifest,conversion_needed,conversion_rule_candidate,example_macro_value,example_manifest_value,formula_example,vba_reference_found,confidence,human_check_needed,notes
+tm,A,1,No_TableNo,data_starts_row2,EXTERNAL_INPUT_FROM_MANIFEST,(C ExptNo + B TableNo),string id,string,yes,A = ExptNo & '_' & TableNo (e.g. '1.01_9'),9.01_10,T9_1.01,,no,med,no,"tm uses ExptNo_TableNo; manifest key is 'T9_1.01'. ID only, not used in physics."
+tm,B,2,P,data_starts_row2,EXTERNAL_INPUT_FROM_MANIFEST,W Pressure_MPa,Pa,MPa,yes,P_Pa = Pressure_MPa*1e6 (or psia*6894.757),13789520,12.065825263044,,no,high,no,Drives all property UDFs. 1750-2500psia=12.07-17.24MPa within SatProp range.
+tm,C,3,Ts,data_starts_row2,FORMULA_DERIVED,,K,-,no,"=TsatFromP(P) VBA UDF, array formula",608.621106065763,,"=TsatFromP(テーブル2[[#This Row],[P]])",yes(TsatFromP),high,no,Auto-recalc from SatProp on P. Do not input.
+tm,D,4,rhoG,data_starts_row2,FORMULA_DERIVED,,kg/m3,-,no,=RhoGFromP(P),85.1478935815794,,"=RhoGFromP(テーブル2[[#This Row],[P]])",yes(RhoGFromP),high,no,property lookup
+tm,E,5,rhoL,data_starts_row2,FORMULA_DERIVED,,kg/m3,-,no,=RhoFFromP(P),624.8662749483865,,"=RhoFFromP(テーブル2[[#This Row],[P]])",yes(RhoFFromP),high,no,property lookup
+tm,F,6,HG,data_starts_row2,FORMULA_DERIVED,,J/kg,-,no,=HgFromP(P),2643264.3898665085,,"=HgFromP(テーブル2[[#This Row],[P]])",yes(HgFromP),high,no,property lookup
+tm,G,7,HL,data_starts_row2,FORMULA_DERIVED,,J/kg,-,no,=HfFromP(P),1562686.9740257831,,"=HfFromP(テーブル2[[#This Row],[P]])",yes(HfFromP),high,no,property lookup
+tm,H,8,muG,data_starts_row2,FORMULA_DERIVED,,Pa.s,-,no,=MuGFromP(P),2.201959404273351e-05,,"=MuGFromP(テーブル2[[#This Row],[P]])",yes(MuGFromP),high,no,property lookup
+tm,I,9,muL,data_starts_row2,FORMULA_DERIVED,,Pa.s,-,no,=MuFFromP(P),7.222325269024983e-05,,"=MuFFromP(テーブル2[[#This Row],[P]])",yes(MuFFromP),high,no,property lookup
+tm,J,10,KL,data_starts_row2,FORMULA_DERIVED,,W/mK,-,no,=KfFromP(P),0.4911212487937569,,"=KfFromP(テーブル2[[#This Row],[P]])",yes(KfFromP),high,no,property lookup
+tm,K,11,CPL,data_starts_row2,FORMULA_DERIVED,,J/kgK,-,no,=CpFFromP(P),7679.75163967041,,"=CpFFromP(テーブル2[[#This Row],[P]])",yes(CpFFromP),high,no,property lookup
+tm,L,12,sigma,data_starts_row2,FORMULA_DERIVED,,N/m,-,no,=SigmaFromP(P),0.006503638288888455,,"=SigmaFromP(テーブル2[[#This Row],[P]])",yes(SigmaFromP),high,no,property lookup
+tm,M,13,No,data_starts_row2,EXTERNAL_INPUT_FROM_MANIFEST,(sequential),int,-,no,sequential row counter (1..280),1,,,no,high,no,Index only. Set 1..N over the imported block.
+tm,N,14,G,data_starts_row2,EXTERNAL_INPUT_FROM_MANIFEST,Y G_SI_kg_m2s,kg/m2/s,kg/m2/s,no,G = G_SI_kg_m2s (manifest already SI). orig=1e6 lb/hr/ft2,2440.8,2305.591,,no,high,no,Mass velocity. Manifest Y already SI.
+tm,O,15,A,data_starts_row2,FORMULA_DERIVED,,m2,-,no,=PI()*Q^2/4 (import block). Orig rows constant.,2.850229569923424e-06,,=PI()*Q^2/4 (import block). Orig rows constant.,no,high,no,Flow area auto-derived from DH. Do NOT input.
+tm,P,16,Pw,data_starts_row2,FORMULA_DERIVED,,m,-,no,=PI()*Q,0.005984734005088555,,=PI()*Q,no,high,no,Wetted perimeter auto-derived from DH.
+tm,Q,17,DH,data_starts_row2,EXTERNAL_INPUT_FROM_MANIFEST,J D_mm,m,mm,yes,DH = D_mm/1000 (or D_in*0.0254),0.001905,1.9049999999999998,,no,high,no,"Tube diameter. O,P,DH all depend on this single input."
+tm,R,18,L_DNB,data_starts_row2,EXTERNAL_INPUT_FROM_MANIFEST,X L_mm,m,mm,yes,L_DNB = L_mm/1000 (or L_in*0.0254),0.1524,152.39999999999998,,no,high,no,Heated length.
+tm,S,19,q_in,data_starts_row2,VBA_DERIVED_OR_UPDATED,,W/m2,-,yes,seed=q_M before run; macro binary-search updates,4124066.34765625,,,no,high,yes,OUTPUT: converged q_in = predicted CHF. Seed=q_M; Module6 outer loop overwrites.
+tm,T,20,Tin,data_starts_row2,EXTERNAL_INPUT_FROM_MANIFEST,H Hsub_kJ_kg (+W Pressure_MPa),K,kJ/kg,yes,"Tin=IF97_T(P, h_f(P)-Hsub). NOT directly in manifest",499.95139682144,471.2476,,no,low,yes,KEY GAP: manifest has Hsub not Tin. Prior handoff computed Tin_K_IF97. Bridge must reproduce.
+tm,U,21,Tf,data_starts_row2,FORMULA_DERIVED,,K,-,no,=T+BG*S*Pw*L_DNB/(N*O*K),570.355221360486,,"=+T2+BG2*S2*テーブル2[[#This Row],[Pw]]*R2/(N2*O2*K2)",no,high,no,bulk fluid temp; formula
+tm,V,22,f(beta),data_starts_row2,LEGACY_DO_NOT_TOUCH,,-,-,no,constant 0.03 (model param),0.03,,,no,med,yes,Fixed model constant. Copy 0.03; not from manifest.
+tm,W,23,Re,data_starts_row2,FORMULA_DERIVED,,-,-,no,=N*Q/I,64379.87527288029,,=+N2*Q2/I2,no,high,no,Reynolds; formula
+tm,X,24,f,data_starts_row2,VBA_DERIVED_OR_UPDATED,,-,-,no,Solver ByChange to drive AA(f_balance)=0; seed 0.01,0.03526893093705516,,,no,high,no,Iterated unknown (friction). Macro Solver 1.
+tm,Y,25,f_left,data_starts_row2,FORMULA_DERIVED,,-,-,no,"=IF(X>0,1/X^0.5,1)",5.324806766795639,,"=IF(X2>0,1/X2^0.5,1)",no,high,no,formula
+tm,Z,26,f_rihgt,data_starts_row2,FORMULA_DERIVED,,-,-,no,"=IF(X>0,1.14-2*LOG(...),0)",5.324806776060438,,"=IF(X2>0,1.14-2*LOG((0.72*L2*E2)/(X2*Q2*N2^2)+9.35/(W2*X2^0.5)),0)",no,high,no,formula (Colebrook RHS)
+tm,AA,27,f_balance,data_starts_row2,FORMULA_DERIVED,,-,-,no,=Y-Z  (Solver1 target=0),-9.264798705999056e-09,,=+Y2-Z2,no,high,no,Residual; Solver drives to 0 by X.
+tm,AB,28,DB,data_starts_row2,FORMULA_DERIVED,,m,-,no,=32/X*L*V*E/N^2,1.8567695831321663e-05,,=32/X2*L2*V2*E2/N2^2,no,high,no,formula
+tm,AC,29,Tw,data_starts_row2,VBA_DERIVED_OR_UPDATED,,K,-,no,Solver ByChange to drive AF(Tw_balance)=0; seed 600,692.2233776361046,,,no,high,no,Iterated unknown (wall temp). Macro Solver 2.
+tm,AD,30,y_plus,data_starts_row2,FORMULA_DERIVED,,-,-,no,=Q/2*AI/I*E,2137.3285628537874,,=+Q2/2*AI2/I2*E2,no,high,no,formula
+tm,AE,31,Tm,data_starts_row2,FORMULA_DERIVED,,K,-,no,"=gettm2(AD,AC,AK,AL,Fcorr) UDF",570.355221360486,,"=+gettm2(AD2,AC2,AK2,AL2,テーブル2[[#This Row],[Fcorr]])",yes(gettm2),high,no,Martinelli mean temp UDF
+tm,AF,32,Tw_balance,data_starts_row2,FORMULA_DERIVED,,-,-,no,=AE-U  (Solver2 target=0),0,,=+AE2-U2,no,high,no,Residual driven to 0 by AC.
+tm,AG,33,y_star,data_starts_row2,VBA_DERIVED_OR_UPDATED,,-,-,no,Solver ByChange to drive AN(y_star_balance)=0; seed 1e-5,1.8650868215012416e-05,,,no,high,no,Iterated unknown. Macro Solver 3.
+tm,AH,34,tauw,data_starts_row2,FORMULA_DERIVED,,-,-,no,=X*N^2/(8*E),42.03195710208176,,=+X2*N2^2/(8*E2),no,high,no,wall shear; formula
+tm,AI,35,Utau,data_starts_row2,FORMULA_DERIVED,,m/s,-,no,=(AH/E)^0.5,0.2593559783392198,,=+(AH2/E2)^0.5,no,high,no,friction velocity; formula
+tm,AJ,36,y_plus2,data_starts_row2,FORMULA_DERIVED,,-,-,no,=AG*AI/I*E,41.85095365665918,,=+AG2*AI2/I2*E2,no,high,no,formula
+tm,AK,37,Q,data_starts_row2,FORMULA_DERIVED,,-,-,no,array formula (heat-flux group),5.241573932459161,,"=+S2*テーブル2[[#This Row],[F_form]]/(E2*CpFromTP((テーブル2[[#This Row],[Tin]]+テーブル2[[#This Row],[Tf]])/2,テーブル2[[#This Row],[P]])*AI2)",no,high,no,array formula
+tm,AL,38,Pr,data_starts_row2,FORMULA_DERIVED,,-,-,no,=K*I/J,1.1293680422758512,,=+K2*I2/J2,no,high,no,Prandtl; formula
+tm,AM,39,T(y_plus),data_starts_row2,FORMULA_DERIVED,,K,-,no,"=gettyp(AC,AJ,AK,AL) UDF",608.621106061201,,"=+gettyp(AC2,AJ2,AK2,AL2)",yes(gettyp),high,no,Martinelli T profile UDF
+tm,AN,40,y_star_balance,data_starts_row2,FORMULA_DERIVED,,-,-,no,=C-AM  (Solver3 target=0),4.562025424093008e-09,,=+C2-AM2,no,high,no,Residual driven to 0 by AG.
+tm,AO,41,delta,data_starts_row2,FORMULA_DERIVED,,m,-,no,=AG-AB,8.31723836907526e-08,,=+AG2-AB2,no,high,no,film thickness; formula
+tm,AP,42,UB,data_starts_row2,VBA_DERIVED_OR_UPDATED,,m/s,-,no,Solver ByChange to drive AY(UB_balance)=0; seed 1,3.4238055019459823,,,no,high,no,Iterated unknown (bubble vel). Macro Solver 4.
+tm,AQ,43,LB,data_starts_row2,FORMULA_DERIVED,,-,-,no,=2*PI()*L*(D+E)/(D*E*AP^2),4.6518328093409135e-05,,=2*PI()*L2*(D2+E2)/(D2*E2*AP2^2),no,high,no,formula
+tm,AR,44,YB,data_starts_row2,FORMULA_DERIVED,,-,-,no,=AO+AB/2,9.367020299351584e-06,,=+AO2+AB2/2,no,high,no,formula
+tm,AS,45,YB_plus,data_starts_row2,FORMULA_DERIVED,,-,-,no,=AR*AI/I*E,21.018792687281238,,=+AR2*AI2/I2*E2,no,high,no,formula
+tm,AT,46,Karman_UB,data_starts_row2,FORMULA_DERIVED,,-,-,no,=getublp(AS) UDF,12.17708463709371,,=+getublp(AS2),yes(getublp),high,no,Karman velocity UDF
+tm,AU,47,UBL,data_starts_row2,FORMULA_DERIVED,,-,-,no,=AT*AI,3.1581996993729224,,=+AT2*AI2,no,high,no,formula
+tm,AV,48,UB_left,data_starts_row2,FORMULA_DERIVED,,-,-,no,=AP-AU,0.2656058025730599,,=+AP2-AU2,no,high,no,formula
+tm,AW,49,CD,data_starts_row2,FORMULA_DERIVED,,-,-,no,=2/3*AB/(L/(9.8*(E-D)))^0.5,0.01116311006709798,,=2/3*AB2/(L2/(9.8*(E2-D2)))^0.5,no,high,no,drag coeff; formula
+tm,AX,50,UB_right,data_starts_row2,FORMULA_DERIVED,,-,-,no,=(2*AQ*9.8*(E-D)/(E*AW))^0.5,0.2656057928380171,,=+(2*AQ2*9.8*(E2-D2)/(E2*AW2))^0.5,no,high,no,formula
+tm,AY,51,UB_balance,data_starts_row2,FORMULA_DERIVED,,-,-,no,=AV-AX  (Solver4 target=0),9.735042771907843e-09,,=+AV2-AX2,no,high,no,Residual driven to 0 by AP.
+tm,AZ,52,HG-HL,data_starts_row2,FORMULA_DERIVED,,J/kg,-,no,=F-G,1080577.4158407254,,=+F2-G2,no,high,no,latent heat; formula
+tm,BA,53,LB/UB,data_starts_row2,FORMULA_DERIVED,,-,-,no,=AQ/AP,1.3586732092979463e-05,,=+AQ2/AP2,no,high,no,formula
+tm,BB,54,q_P,data_starts_row2,OUTPUT_TO_COLLECT,,W/m2,-,no,=E*AO*AZ/BA,4133396.892820668,,=+E2*AO2*AZ2/BA2,no,high,no,PREDICTED CHF (Celata). Main output; outer loop drives S->BB.
+tm,BC,55,dq_chf,data_starts_row2,FORMULA_DERIVED,,W/m2,-,no,=BB-S,9330.545164417941,,=BB2-S2,no,high,no,Also used by macro as lastRow anchor column (End(xlUp)).
+tm,BD,56,dq_ratio,data_starts_row2,FORMULA_DERIVED,,%,-,no,=(BB-S)/S*100,0.22624624285495762,,=+(BB2-S2)/S2*100,no,high,no,convergence residual %
+tm,BE,57,q_M,data_starts_row2,EXTERNAL_INPUT_FROM_MANIFEST,Z qCHF_MW_m2,W/m2,MW/m2,yes,q_M = qCHF_MW_m2*1e6 (or 1e6 BTU/hr/ft2*3.154591),4038400,3.2176818,,no,high,no,Measured burnout flux (target).
+tm,BF,58,PM_ratio,data_starts_row2,OUTPUT_TO_COLLECT,,-,-,no,=q_P/q_M,1.0235233985788104,,"=テーブル2[[#This Row],[q_P]]/テーブル2[[#This Row],[q_M]]",no,high,no,KEY RESULT metric (predicted/measured).
+tm,BG,59,F_form,data_starts_row2,LEGACY_DO_NOT_TOUCH,,-,-,no,constant 1 (F1なし),1,,,no,high,no,Form factor. This workbook = F1なし => 1. Copy constant.
+tm,BH,60,x_Mes,data_starts_row2,EXTERNAL_INPUT_FROM_MANIFEST,I x_report,-,-,no,x_Mes = x_report (dimensionless),-0.05,-0.021,,no,high,no,Measured exit quality. Manifest I = x_report.
+tm,BI,61,A_corr,data_starts_row2,LEGACY_DO_NOT_TOUCH,,-,-,no,constant 0.046,0.046,,,no,med,no,Model correlation constant. Copy 0.046.
+tm,BJ,62,sigma_corr,data_starts_row2,LEGACY_DO_NOT_TOUCH,,-,-,no,constant 5625,5625,,,no,med,no,Model correlation constant. Copy 5625.
+tm,BK,63,Fcorr,data_starts_row2,LEGACY_DO_NOT_TOUCH,,-,-,no,constant 1,1,,,no,med,no,Correction factor=1. Copy.
+tm,BL,64,Tsub,data_starts_row2,FORMULA_DERIVED,,K,-,no,=Ts-Tin,108.66970924432297,,"=テーブル2[[#This Row],[Ts]]-テーブル2[[#This Row],[Tin]]",no,high,no,Subcooling; depends on Tin accuracy.
+tm,BM,65,q_P_MW,data_starts_row2,OUTPUT_TO_COLLECT,,MW/m2,-,no,=q_P*1e-6,4.1333968928206675,,"=テーブル2[[#This Row],[q_P]]*0.000001",no,high,no,Predicted CHF in MW/m2 (output convenience).
+tm,BN,66,Tsub2,data_starts_row2,FORMULA_DERIVED,,K,-,no,=Tsub,108.66970924432297,,"=テーブル2[[#This Row],[Tsub]]",no,high,no,formula copy
+tm,BO,67,Fcorr2,data_starts_row2,FORMULA_DERIVED,,-,-,no,=Fcorr,1,,"=テーブル2[[#This Row],[Fcorr]]",no,high,no,formula copy
+tm,BP,68,(Tsub-40)^2,data_starts_row2,FORMULA_DERIVED,,-,-,no,=(Tsub-40)^2,4715.528967699856,,"=(テーブル2[[#This Row],[Tsub]]-40)^2",no,high,no,formula
+tm,BQ,69,F2,data_starts_row2,LEGACY_DO_NOT_TOUCH,,-,-,no,constant 1,1,,,no,med,no,Copy constant 1.
+tm,BR,70,L,data_starts_row2,EXTERNAL_INPUT_FROM_MANIFEST,X L_mm,m,mm,yes,L = L_mm/1000 (duplicate of L_DNB),0.1524,152.39999999999998,,no,med,yes,Duplicate of R(L_DNB). Confirm both must match.
