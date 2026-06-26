@@ -1,0 +1,5 @@
+# Generated TM03C Codex injection artifacts are intentionally not tracked.
+TM03C_B2robust_main280_injected_by_codex_*.xlsm
+TM03C_B2robust_main280_injected_by_codex_QA_*.xlsx
+TM03C_main280_input_*.xlsx
+run_report_TM03C_B2robust_main280_injected_by_codex_*.md
