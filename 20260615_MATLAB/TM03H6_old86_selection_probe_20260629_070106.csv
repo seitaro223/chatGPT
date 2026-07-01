@@ -1,0 +1,7 @@
+hypothesis,N_raw,N_old86_inside,N_not_old86_inside,N_x_gt_0.05_inside,N_x_le_0.05_inside
+source01 and 1.8<=G_1e6<= 3.0,104,86,18,47,57
+source01 and 1.8<=G_1e6<= 3.1,111,86,25,50,61
+source01 and 1.6<=G_1e6<= 3.0,125,86,39,55,70
+source01 and 1.9<=G_1e6<= 3.0,96,84,12,42,54
+source01 and 2.0<=G_1e6<= 3.0,92,84,8,40,52
+source01 and 1.8<=G_1e6<= 3.5,118,86,32,51,67

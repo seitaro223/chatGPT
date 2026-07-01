@@ -1,0 +1,13 @@
+dataset,ExptNo_norm,PM_noF1,Tsub,x,G_kg_m2s,scope,old86_member,yellow_candidate_handregion,high_PM_cluster,x_band4,G_band3,policy_class,PWR_G_upper_scope,deep_subcooled,PM_ge_2p2
+current187_noF1,145.01,1.784314835756727,128.29772162697628,-0.202,4109.3769,current_only,False,False,False,x<=-0.20,1900<=G<=4200,B_deep_subcooled_Gle4200_keep_separate,G<=4200,True,False
+current187_noF1,169.01,2.165236999903537,299.93981302215946,-0.359,1213.82585,current_only,False,False,False,x<=-0.20,G<1900,B_deep_subcooled_Gle4200_keep_separate,G<=4200,True,False
+current187_noF1,170.01,2.029447535550055,280.20066140208166,-0.285,1216.53831,current_only,False,False,False,x<=-0.20,G<1900,B_deep_subcooled_Gle4200_keep_separate,G<=4200,True,False
+current187_noF1,184.01,2.1458508558958083,230.5931119642869,-0.326,1871.5974,current_only,False,False,False,x<=-0.20,G<1900,B_deep_subcooled_Gle4200_keep_separate,G<=4200,True,False
+current187_noF1,188.01,2.149368878100929,249.67333431527183,-0.335,2047.9073,current_only,False,False,False,x<=-0.20,1900<=G<=4200,B_deep_subcooled_Gle4200_keep_separate,G<=4200,True,False
+current187_noF1,205.01,2.0745127624661843,162.25628229717415,-0.284,3594.0095,current∩old86,True,False,False,x<=-0.20,1900<=G<=4200,B_deep_subcooled_Gle4200_keep_separate,G<=4200,True,False
+current187_noF1,207.01,1.84831057414112,132.74047859555014,-0.216,3607.5718,current∩old86,True,False,False,x<=-0.20,1900<=G<=4200,B_deep_subcooled_Gle4200_keep_separate,G<=4200,True,False
+current187_noF1,209.01,2.2099410980435703,194.2074052316925,-0.334,3648.2587,current∩old86,True,True,True,x<=-0.20,1900<=G<=4200,B_deep_subcooled_Gle4200_keep_separate,G<=4200,True,True
+current187_noF1,210.01,2.17241176700994,189.0155585984569,-0.329,3648.2587,current∩old86,True,False,False,x<=-0.20,1900<=G<=4200,B_deep_subcooled_Gle4200_keep_separate,G<=4200,True,False
+current187_noF1,213.01,2.4704383105441856,250.73285002387016,-0.457,3783.8817,current∩old86,True,False,True,x<=-0.20,1900<=G<=4200,B_deep_subcooled_Gle4200_keep_separate,G<=4200,True,True
+current187_noF1,36.01,2.721081299499212,132.16438099330514,-0.338,2305.591,current_only,False,True,True,x<=-0.20,1900<=G<=4200,B_deep_subcooled_Gle4200_keep_separate,G<=4200,True,True
+current187_noF1,38.01,2.601409107771878,86.04557897376492,-0.256,2712.46,current_only,False,True,True,x<=-0.20,1900<=G<=4200,B_deep_subcooled_Gle4200_keep_separate,G<=4200,True,True

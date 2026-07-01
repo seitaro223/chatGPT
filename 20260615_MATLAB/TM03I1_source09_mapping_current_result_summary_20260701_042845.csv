@@ -1,0 +1,7 @@
+item,value
+ANL/source09 mapping rows,232
+MATCH_EXACT,230
+not MATCH_EXACT,2
+unique TM_EXPT_NO,231
+current_result source09 by No suffix,0
+current_result source09 by D/L physical,0

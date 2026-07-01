@@ -1,0 +1,13 @@
+﻿G_le_4200,LD_band_detail,A_deep_highG_PWR_out_candidate,B_deep_Gle4200_keep_separate,C_not_deep_highG_PWR_out_candidate,D_not_deep_Gle4200_main_candidate
+False,LD<40,3,0,2,0
+False,40<=LD<60,0,0,0,0
+False,60<=LD<70,18,0,27,0
+False,70<=LD<80,0,0,0,0
+False,80<=LD<120,8,0,12,0
+False,LD>=120,0,0,0,0
+True,LD<40,0,2,0,2
+True,40<=LD<60,0,0,0,0
+True,60<=LD<70,0,10,0,45
+True,70<=LD<80,0,0,0,19
+True,80<=LD<120,0,0,0,30
+True,LD>=120,0,0,0,9

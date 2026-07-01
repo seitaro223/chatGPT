@@ -1,0 +1,6 @@
+policy_class,False,True,All
+A_deep_subcooled_highG_PWR_out_candidate,7,22,29
+B_deep_subcooled_Gle4200_keep_separate,8,4,12
+C_not_deep_highG_PWR_out_candidate,41,0,41
+D_not_deep_Gle4200_main_candidate,105,0,105
+All,161,26,187
